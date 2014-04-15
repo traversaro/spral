@@ -22,7 +22,7 @@ subroutine metis_order(n,ptr,row,perm,invp,flag,stat)
       ! row indices for column j. ptr(n)+1 must equal the number of entries
       ! stored + 1. Only the lower triangular entries are stored with no
       ! duplicates or out-of-range entries
-   integer, intent(in) :: row(:) ! size at least ptr(n+1)-1
+   integer, intent(in) :: row(*) ! size at least ptr(n+1)-1
    integer, intent(out) :: perm(n) ! Holds elimination order on output
    integer, intent(out) :: invp(n) ! Holds inverse of elimination order on exit
    integer, intent(out) :: flag ! Return value

@@ -13,8 +13,9 @@ NVCCLINK = \
 .cu.o:
 	$(NVCC) $(NVCCFLAGS) $(AM_NVCC_FLAGS) -dc -o $@ $<
 
-# Include directory for standard C
+# Include directory for standard C/C++
 AM_CFLAGS = -Iinclude -std=c99
+AM_CXXFLAGS = -Iinclude
 
 # FIXME: make below configurable
 LDADD = -L. -lspral $(METIS_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(FCLIBS) -lrt
@@ -25,7 +26,8 @@ lib_LIBRARIES = libspral.a
 # CORE_ANALYSE
 # Note: first so not +=
 libspral_a_SOURCES = \
-	src/core_analyse.f90
+	src/core_analyse.f90 \
+	interfaces/C/core_analyse.f90
 
 # CUDA
 if HAVE_NVCC
@@ -34,6 +36,10 @@ libspral_a_SOURCES += \
 	src/cuda/cuda.f90 \
 	src/cuda/cuda_check.h
 endif
+
+# ICS
+libspral_a_SOURCES += \
+	src/ics/ics.cpp
 
 # MATCH_ORDER
 libspral_a_SOURCES += \
@@ -46,7 +52,8 @@ libspral_a_SOURCES += \
 
 # METIS_WRAPPER
 libspral_a_SOURCES += \
-	src/metis$(METIS_VERSION)_wrapper.f90
+	src/metis$(METIS_VERSION)_wrapper.f90 \
+	interfaces/C/metis_wrapper.f90
 
 # PGM
 libspral_a_SOURCES += \
