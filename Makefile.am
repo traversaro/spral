@@ -43,7 +43,6 @@ libspral_a_SOURCES += \
 endif
 
 # ICS
-include_HEADERS += include/spral_ics.h
 libspral_a_SOURCES += \
 	src/ics/symbolic.cxx \
 	src/ics/symbolic.hxx

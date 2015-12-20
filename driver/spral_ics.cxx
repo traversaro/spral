@@ -38,5 +38,8 @@ int main(void) {
    /* Factorize */
    /* Solve */
 
+   /* Cleanup */
+   spral_rb_free_handle(&read_handle);
+
    return 0; // Success
 }

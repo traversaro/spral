@@ -6,9 +6,9 @@ integer(C_INT) function spral_core_analyse_basic_analyse(n, ptr, row, perm, &
    implicit none
 
    integer(C_INT), value :: n
-   integer(C_INT), dimension(*), intent(in) :: ptr
+   integer(C_INT), dimension(n+1), intent(in) :: ptr
    integer(C_INT), dimension(*), intent(in) :: row
-   integer(C_INT), dimension(*), intent(inout) :: perm
+   integer(C_INT), dimension(n), intent(inout) :: perm
    integer(C_INT), intent(out) :: nnodes
    type(C_PTR), intent(out) :: csptr
    type(C_PTR), intent(out) :: csparent
@@ -26,13 +26,13 @@ integer(C_INT) function spral_core_analyse_basic_analyse(n, ptr, row, perm, &
    integer(C_INT), dimension(:), pointer :: psptr, psparent, prlist
    integer(C_LONG), dimension(:), pointer :: prptr
 
-   integer(C_INT) :: dummy_int
+   integer(C_INT) :: dummy_int, i
    integer(C_LONG) :: dummy_long
 
    interface
       type(C_PTR) function malloc(sz) bind(C)
          use iso_c_binding
-         integer(C_SIZE_T) :: sz
+         integer(C_SIZE_T), value :: sz
       end function malloc
    end interface
 
@@ -44,10 +44,7 @@ integer(C_INT) function spral_core_analyse_basic_analyse(n, ptr, row, perm, &
       call basic_analyse(n, ptr2, row2, perm, nnodes, fsptr, fsparent, frptr, &
          frlist, nemin, spral_core_analyse_basic_analyse, stat, nfact, nflops)
       perm(1:n) = perm(1:n) - 1
-      fsptr(:) = fsptr(:) - 1
-      fsparent(:) = fsparent(:) - 1
-      frptr(:) = frptr(:) - 1
-      frlist(:) = frlist(:) - 1
+      ! NB: other outputs are corrected for base as we copy them out below
    else
       call basic_analyse(n, ptr, row, perm, nnodes, fsptr, fsparent, frptr, &
          frlist, nemin, spral_core_analyse_basic_analyse, stat, nfact, nflops)
@@ -56,23 +53,21 @@ integer(C_INT) function spral_core_analyse_basic_analyse(n, ptr, row, perm, &
    if(allocated(fsptr)) then
       csptr = malloc(size(fsptr)*C_SIZEOF(dummy_int))
       call C_F_POINTER(csptr, psptr, shape(fsptr))
-      psptr(:) = fsptr(:)
+      psptr(:) = fsptr(:) - (1-base)
    endif
    if(allocated(fsparent)) then
       csparent = malloc(size(fsparent)*C_SIZEOF(dummy_int))
       call C_F_POINTER(csparent, psparent, shape(fsparent))
-      psparent(:) = fsparent(:)
+      psparent(:) = fsparent(:) - (1-base)
    endif
    if(allocated(frptr)) then
       crptr = malloc(size(frptr)*C_SIZEOF(dummy_long))
       call C_F_POINTER(crptr, prptr, shape(frptr))
-      prptr(:) = frptr(:)
+      prptr(:) = frptr(:) - (1-base)
    endif
    if(allocated(frlist)) then
       crlist = malloc(size(frlist)*C_SIZEOF(dummy_int))
       call C_F_POINTER(crlist, prlist, shape(frlist))
-      prlist(:) = frlist(:)
+      prlist(:) = frlist(:) - (1-base)
    endif
-      
-
 end function spral_core_analyse_basic_analyse

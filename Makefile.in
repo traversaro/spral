@@ -672,11 +672,10 @@ am__can_run_installinfo = \
     n|no|NO) false;; \
     *) (install-info --version) >/dev/null 2>&1;; \
   esac
-am__include_HEADERS_DIST = include/spral.h include/spral_ics.h \
-	include/spral_matrix_util.h include/spral_rutherford_boeing.h \
-	include/spral_scaling.h include/spral_random.h \
-	include/spral_random_matrix.h include/spral_ssids.h \
-	include/spral_ssmfe.h
+am__include_HEADERS_DIST = include/spral.h include/spral_matrix_util.h \
+	include/spral_rutherford_boeing.h include/spral_scaling.h \
+	include/spral_random.h include/spral_random_matrix.h \
+	include/spral_ssids.h include/spral_ssmfe.h
 HEADERS = $(include_HEADERS)
 am__tagged_files = $(HEADERS) $(SOURCES) $(TAGS_FILES) $(LISP)
 # Read a list of newline-separated strings from the standard input,
@@ -1028,8 +1027,6 @@ LDADD = -L. -lspral $(METIS_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(FCLIBS) -lrt
 CUDA_LIBS = -lcublas
 lib_LIBRARIES = libspral.a
 
-# ICS
-
 # MATRIX_UTIL
 
 # RUTHERFORD_BOEING
@@ -1041,16 +1038,17 @@ lib_LIBRARIES = libspral.a
 # RANDOM_MATRIX
 
 # SSMFE
-include_HEADERS = include/spral.h include/spral_ics.h \
-	include/spral_matrix_util.h include/spral_rutherford_boeing.h \
-	include/spral_scaling.h include/spral_random.h \
-	include/spral_random_matrix.h $(am__append_2) \
-	include/spral_ssmfe.h
+include_HEADERS = include/spral.h include/spral_matrix_util.h \
+	include/spral_rutherford_boeing.h include/spral_scaling.h \
+	include/spral_random.h include/spral_random_matrix.h \
+	$(am__append_2) include/spral_ssmfe.h
 
 # BLAS_IFACE
 # Note: first so not +=
 
 # CORE_ANALYSE
+
+# ICS
 
 # LAPACK_IFACE
 
