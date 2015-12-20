@@ -97,6 +97,7 @@ host_triplet = @host@
 @HAVE_NVCC_TRUE@	src/cuda/cuda.f90 \
 @HAVE_NVCC_TRUE@	src/cuda/cuda_check.h
 
+bin_PROGRAMS = spral_ics$(EXEEXT) $(am__EXEEXT_1)
 check_PROGRAMS = scaling_test$(EXEEXT) \
 	examples/Fortran/scaling/auction_sym$(EXEEXT) \
 	examples/Fortran/scaling/auction_unsym$(EXEEXT) \
@@ -113,7 +114,7 @@ check_PROGRAMS = scaling_test$(EXEEXT) \
 	random_test$(EXEEXT) examples/Fortran/random$(EXEEXT) \
 	examples/C/random$(EXEEXT) random_matrix_test$(EXEEXT) \
 	examples/Fortran/random_matrix$(EXEEXT) \
-	examples/C/random_matrix$(EXEEXT) $(am__EXEEXT_1) \
+	examples/C/random_matrix$(EXEEXT) $(am__EXEEXT_2) \
 	ssmfe_test$(EXEEXT) ssmfe_ciface_test$(EXEEXT) \
 	examples/C/ssmfe/hermitian$(EXEEXT) \
 	examples/C/ssmfe/precond_core$(EXEEXT) \
@@ -126,7 +127,7 @@ check_PROGRAMS = scaling_test$(EXEEXT) \
 	examples/Fortran/ssmfe/precond_ssmfe$(EXEEXT) \
 	examples/Fortran/ssmfe/shift_invert$(EXEEXT)
 TESTS = scaling_test$(EXEEXT) random_test$(EXEEXT) \
-	random_matrix_test$(EXEEXT) $(am__EXEEXT_2) \
+	random_matrix_test$(EXEEXT) $(am__EXEEXT_3) \
 	ssmfe_test$(EXEEXT) ssmfe_ciface_test$(EXEEXT)
 
 # SSIDS
@@ -153,13 +154,13 @@ TESTS = scaling_test$(EXEEXT) random_test$(EXEEXT) \
 @HAVE_NVCC_TRUE@	src/ssids/syrk_kernels.cu \
 @HAVE_NVCC_TRUE@	interfaces/C/ssids.f90
 
-@HAVE_NVCC_TRUE@bin_PROGRAMS = spral_ssids$(EXEEXT)
-@HAVE_NVCC_TRUE@am__append_4 = \
+@HAVE_NVCC_TRUE@am__append_4 = spral_ssids
+@HAVE_NVCC_TRUE@am__append_5 = \
 @HAVE_NVCC_TRUE@	ssids_test \
 @HAVE_NVCC_TRUE@	examples/Fortran/ssids \
 @HAVE_NVCC_TRUE@	examples/C/ssids
 
-@HAVE_NVCC_TRUE@am__append_5 = ssids_test
+@HAVE_NVCC_TRUE@am__append_6 = ssids_test
 subdir = .
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/acx_lapack.m4 \
@@ -215,9 +216,9 @@ libspral_a_AR = $(AR) $(ARFLAGS)
 libspral_a_LIBADD =
 am__libspral_a_SOURCES_DIST = src/blas_iface.f90 src/core_analyse.f90 \
 	interfaces/C/core_analyse.f90 src/cuda/api_wrappers.cu \
-	src/cuda/cuda.f90 src/cuda/cuda_check.h src/ics/ics.cpp \
-	src/lapack_iface.f90 src/match_order.f90 src/matrix_util.f90 \
-	interfaces/C/matrix_util.f90 \
+	src/cuda/cuda.f90 src/cuda/cuda_check.h src/ics/symbolic.cxx \
+	src/ics/symbolic.hxx src/lapack_iface.f90 src/match_order.f90 \
+	src/matrix_util.f90 interfaces/C/matrix_util.f90 \
 	src/metis$(METIS_VERSION)_wrapper.f90 \
 	interfaces/C/metis_wrapper.f90 src/pgm.f90 \
 	src/rutherford_boeing.f90 interfaces/C/rutherford_boeing.f90 \
@@ -258,7 +259,7 @@ am__dirstamp = $(am__leading_dot)dirstamp
 @HAVE_NVCC_TRUE@	interfaces/C/ssids.$(OBJEXT)
 am_libspral_a_OBJECTS = src/blas_iface.$(OBJEXT) \
 	src/core_analyse.$(OBJEXT) interfaces/C/core_analyse.$(OBJEXT) \
-	$(am__objects_1) src/ics/ics.$(OBJEXT) \
+	$(am__objects_1) src/ics/symbolic.$(OBJEXT) \
 	src/lapack_iface.$(OBJEXT) src/match_order.$(OBJEXT) \
 	src/matrix_util.$(OBJEXT) interfaces/C/matrix_util.$(OBJEXT) \
 	src/metis$(METIS_VERSION)_wrapper.$(OBJEXT) \
@@ -274,7 +275,8 @@ am_libspral_a_OBJECTS = src/blas_iface.$(OBJEXT) \
 	interfaces/C/ssmfe_core.$(OBJEXT) \
 	interfaces/C/ssmfe_expert.$(OBJEXT)
 libspral_a_OBJECTS = $(am_libspral_a_OBJECTS)
-@HAVE_NVCC_TRUE@am__EXEEXT_1 = ssids_test$(EXEEXT) \
+@HAVE_NVCC_TRUE@am__EXEEXT_1 = spral_ssids$(EXEEXT)
+@HAVE_NVCC_TRUE@am__EXEEXT_2 = ssids_test$(EXEEXT) \
 @HAVE_NVCC_TRUE@	examples/Fortran/ssids$(EXEEXT) \
 @HAVE_NVCC_TRUE@	examples/C/ssids$(EXEEXT)
 PROGRAMS = $(bin_PROGRAMS)
@@ -521,6 +523,11 @@ scaling_test_LDADD = $(LDADD)
 scaling_test_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1)
+am_spral_ics_OBJECTS = driver/spral_ics.$(OBJEXT)
+spral_ics_OBJECTS = $(am_spral_ics_OBJECTS)
+spral_ics_LDADD = $(LDADD)
+spral_ics_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am__spral_ssids_SOURCES_DIST = driver/spral_ssids.f90
 @HAVE_NVCC_TRUE@am_spral_ssids_OBJECTS = driver/spral_ssids.$(OBJEXT)
 spral_ssids_OBJECTS = $(am_spral_ssids_OBJECTS)
@@ -624,9 +631,9 @@ SOURCES = $(libspral_a_SOURCES) $(examples_C_random_SOURCES) \
 	$(examples_Fortran_ssmfe_precond_ssmfe_SOURCES) \
 	$(examples_Fortran_ssmfe_shift_invert_SOURCES) \
 	$(random_matrix_test_SOURCES) $(random_test_SOURCES) \
-	$(scaling_test_SOURCES) $(spral_ssids_SOURCES) \
-	$(ssids_test_SOURCES) $(ssmfe_ciface_test_SOURCES) \
-	$(ssmfe_test_SOURCES)
+	$(scaling_test_SOURCES) $(spral_ics_SOURCES) \
+	$(spral_ssids_SOURCES) $(ssids_test_SOURCES) \
+	$(ssmfe_ciface_test_SOURCES) $(ssmfe_test_SOURCES)
 DIST_SOURCES = $(am__libspral_a_SOURCES_DIST) \
 	$(examples_C_random_SOURCES) \
 	$(examples_C_random_matrix_SOURCES) \
@@ -657,18 +664,19 @@ DIST_SOURCES = $(am__libspral_a_SOURCES_DIST) \
 	$(examples_Fortran_ssmfe_precond_ssmfe_SOURCES) \
 	$(examples_Fortran_ssmfe_shift_invert_SOURCES) \
 	$(random_matrix_test_SOURCES) $(random_test_SOURCES) \
-	$(scaling_test_SOURCES) $(am__spral_ssids_SOURCES_DIST) \
-	$(am__ssids_test_SOURCES_DIST) $(ssmfe_ciface_test_SOURCES) \
-	$(ssmfe_test_SOURCES)
+	$(scaling_test_SOURCES) $(spral_ics_SOURCES) \
+	$(am__spral_ssids_SOURCES_DIST) $(am__ssids_test_SOURCES_DIST) \
+	$(ssmfe_ciface_test_SOURCES) $(ssmfe_test_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
     *) (install-info --version) >/dev/null 2>&1;; \
   esac
-am__include_HEADERS_DIST = include/spral.h include/spral_matrix_util.h \
-	include/spral_rutherford_boeing.h include/spral_scaling.h \
-	include/spral_random.h include/spral_random_matrix.h \
-	include/spral_ssids.h include/spral_ssmfe.h
+am__include_HEADERS_DIST = include/spral.h include/spral_ics.h \
+	include/spral_matrix_util.h include/spral_rutherford_boeing.h \
+	include/spral_scaling.h include/spral_random.h \
+	include/spral_random_matrix.h include/spral_ssids.h \
+	include/spral_ssmfe.h
 HEADERS = $(include_HEADERS)
 am__tagged_files = $(HEADERS) $(SOURCES) $(TAGS_FILES) $(LISP)
 # Read a list of newline-separated strings from the standard input,
@@ -847,7 +855,7 @@ am__set_TESTS_bases = \
   bases=`for i in $$bases; do echo $$i; done | sed 's/\.log$$//'`; \
   bases=`echo $$bases`
 RECHECK_LOGS = $(TEST_LOGS)
-@HAVE_NVCC_TRUE@am__EXEEXT_2 = ssids_test$(EXEEXT)
+@HAVE_NVCC_TRUE@am__EXEEXT_3 = ssids_test$(EXEEXT)
 TEST_SUITE_LOG = test-suite.log
 TEST_EXTENSIONS = @EXEEXT@ .test
 LOG_DRIVER = $(SHELL) $(top_srcdir)/test-driver
@@ -1020,6 +1028,8 @@ LDADD = -L. -lspral $(METIS_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(FCLIBS) -lrt
 CUDA_LIBS = -lcublas
 lib_LIBRARIES = libspral.a
 
+# ICS
+
 # MATRIX_UTIL
 
 # RUTHERFORD_BOEING
@@ -1031,17 +1041,16 @@ lib_LIBRARIES = libspral.a
 # RANDOM_MATRIX
 
 # SSMFE
-include_HEADERS = include/spral.h include/spral_matrix_util.h \
-	include/spral_rutherford_boeing.h include/spral_scaling.h \
-	include/spral_random.h include/spral_random_matrix.h \
-	$(am__append_2) include/spral_ssmfe.h
+include_HEADERS = include/spral.h include/spral_ics.h \
+	include/spral_matrix_util.h include/spral_rutherford_boeing.h \
+	include/spral_scaling.h include/spral_random.h \
+	include/spral_random_matrix.h $(am__append_2) \
+	include/spral_ssmfe.h
 
 # BLAS_IFACE
 # Note: first so not +=
 
 # CORE_ANALYSE
-
-# ICS
 
 # LAPACK_IFACE
 
@@ -1053,8 +1062,9 @@ include_HEADERS = include/spral.h include/spral_matrix_util.h \
 
 # TIMER
 libspral_a_SOURCES = src/blas_iface.f90 src/core_analyse.f90 \
-	interfaces/C/core_analyse.f90 $(am__append_1) src/ics/ics.cpp \
-	src/lapack_iface.f90 src/match_order.f90 src/matrix_util.f90 \
+	interfaces/C/core_analyse.f90 $(am__append_1) \
+	src/ics/symbolic.cxx src/ics/symbolic.hxx src/lapack_iface.f90 \
+	src/match_order.f90 src/matrix_util.f90 \
 	interfaces/C/matrix_util.f90 \
 	src/metis$(METIS_VERSION)_wrapper.f90 \
 	interfaces/C/metis_wrapper.f90 src/pgm.f90 \
@@ -1065,6 +1075,7 @@ libspral_a_SOURCES = src/blas_iface.f90 src/core_analyse.f90 \
 	src/ssmfe/ssmfe.f90 src/ssmfe/core.f90 src/ssmfe/expert.f90 \
 	interfaces/C/ssmfe.f90 interfaces/C/ssmfe_core.f90 \
 	interfaces/C/ssmfe_expert.f90
+spral_ics_SOURCES = driver/spral_ics.cxx
 EXTRA_DIST = src/metis4_wrapper.f90 src/metis5_wrapper.f90
 scaling_test_SOURCES = tests/scaling.f90
 examples_Fortran_scaling_auction_sym_SOURCES = examples/Fortran/scaling/auction_sym.f90
@@ -1147,7 +1158,7 @@ examples_Fortran_ssmfe_shift_invert_SOURCES = \
 all: all-am
 
 .SUFFIXES:
-.SUFFIXES: .cu .c .cpp .f90 .log .o .obj .test .test$(EXEEXT) .trs
+.SUFFIXES: .cu .c .cxx .f90 .log .o .obj .test .test$(EXEEXT) .trs
 am--refresh: Makefile
 	@:
 $(srcdir)/Makefile.in:  $(srcdir)/Makefile.am  $(am__configure_deps)
@@ -1246,7 +1257,7 @@ src/ics/$(am__dirstamp):
 src/ics/$(DEPDIR)/$(am__dirstamp):
 	@$(MKDIR_P) src/ics/$(DEPDIR)
 	@: > src/ics/$(DEPDIR)/$(am__dirstamp)
-src/ics/ics.$(OBJEXT): src/ics/$(am__dirstamp) \
+src/ics/symbolic.$(OBJEXT): src/ics/$(am__dirstamp) \
 	src/ics/$(DEPDIR)/$(am__dirstamp)
 src/lapack_iface.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
@@ -1650,6 +1661,12 @@ driver/$(am__dirstamp):
 driver/$(DEPDIR)/$(am__dirstamp):
 	@$(MKDIR_P) driver/$(DEPDIR)
 	@: > driver/$(DEPDIR)/$(am__dirstamp)
+driver/spral_ics.$(OBJEXT): driver/$(am__dirstamp) \
+	driver/$(DEPDIR)/$(am__dirstamp)
+
+spral_ics$(EXEEXT): $(spral_ics_OBJECTS) $(spral_ics_DEPENDENCIES) $(EXTRA_spral_ics_DEPENDENCIES) 
+	@rm -f spral_ics$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(spral_ics_OBJECTS) $(spral_ics_LDADD) $(LIBS)
 driver/spral_ssids.$(OBJEXT): driver/$(am__dirstamp) \
 	driver/$(DEPDIR)/$(am__dirstamp)
 
@@ -1702,6 +1719,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@driver/$(DEPDIR)/spral_ics.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@examples/C/$(DEPDIR)/random.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@examples/C/$(DEPDIR)/random_matrix.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@examples/C/$(DEPDIR)/ssids.Po@am__quote@
@@ -1716,7 +1734,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@examples/C/ssmfe/$(DEPDIR)/precond_expert.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@examples/C/ssmfe/$(DEPDIR)/precond_ssmfe.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@examples/C/ssmfe/$(DEPDIR)/shift_invert.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@src/ics/$(DEPDIR)/ics.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/ics/$(DEPDIR)/symbolic.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@tests/ssmfe/$(DEPDIR)/ssmfe_ciface.Po@am__quote@
 
 .c.o:
@@ -1735,7 +1753,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(COMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
 
-.cpp.o:
+.cxx.o:
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.o$$||'`;\
 @am__fastdepCXX_TRUE@	$(CXXCOMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ $< &&\
 @am__fastdepCXX_TRUE@	$(am__mv) $$depbase.Tpo $$depbase.Po
@@ -1743,7 +1761,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXXCOMPILE) -c -o $@ $<
 
-.cpp.obj:
+.cxx.obj:
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.obj$$||'`;\
 @am__fastdepCXX_TRUE@	$(CXXCOMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ `$(CYGPATH_W) '$<'` &&\
 @am__fastdepCXX_TRUE@	$(am__mv) $$depbase.Tpo $$depbase.Po
@@ -2277,7 +2295,7 @@ clean-am: clean-binPROGRAMS clean-checkPROGRAMS clean-generic \
 
 distclean: distclean-am
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
-	-rm -rf examples/C/$(DEPDIR) examples/C/scaling/$(DEPDIR) examples/C/ssmfe/$(DEPDIR) src/ics/$(DEPDIR) tests/ssmfe/$(DEPDIR)
+	-rm -rf driver/$(DEPDIR) examples/C/$(DEPDIR) examples/C/scaling/$(DEPDIR) examples/C/ssmfe/$(DEPDIR) src/ics/$(DEPDIR) tests/ssmfe/$(DEPDIR)
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -2325,7 +2343,7 @@ installcheck-am:
 maintainer-clean: maintainer-clean-am
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
 	-rm -rf $(top_srcdir)/autom4te.cache
-	-rm -rf examples/C/$(DEPDIR) examples/C/scaling/$(DEPDIR) examples/C/ssmfe/$(DEPDIR) src/ics/$(DEPDIR) tests/ssmfe/$(DEPDIR)
+	-rm -rf driver/$(DEPDIR) examples/C/$(DEPDIR) examples/C/scaling/$(DEPDIR) examples/C/ssmfe/$(DEPDIR) src/ics/$(DEPDIR) tests/ssmfe/$(DEPDIR)
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 
@@ -2464,6 +2482,7 @@ src/ssmfe/core.$(OBJEXT): src/blas_iface.$(OBJEXT) \
 								  src/lapack_iface.$(OBJEXT)
 src/ssmfe/expert.$(OBJEXT): src/ssmfe/core.$(OBJEXT)
 src/ssmfe/ssmfe.$(OBJEXT): src/ssmfe/expert.$(OBJEXT)
+driver/spral_ics.$(OBJEXT): libspral.a
 driver/spral_ssids.$(OBJEXT): libspral.a
 
 # CUDA header deps

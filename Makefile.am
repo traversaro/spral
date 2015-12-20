@@ -43,8 +43,12 @@ libspral_a_SOURCES += \
 endif
 
 # ICS
+include_HEADERS += include/spral_ics.h
 libspral_a_SOURCES += \
-	src/ics/ics.cpp
+	src/ics/symbolic.cxx \
+	src/ics/symbolic.hxx
+bin_PROGRAMS = spral_ics
+spral_ics_SOURCES = driver/spral_ics.cxx
 
 # LAPACK_IFACE
 libspral_a_SOURCES += \
@@ -185,7 +189,7 @@ libspral_a_SOURCES += \
 	src/ssids/ssids.f90 \
 	src/ssids/syrk_kernels.cu \
 	interfaces/C/ssids.f90
-bin_PROGRAMS = spral_ssids
+bin_PROGRAMS += spral_ssids
 spral_ssids_SOURCES = \
 	driver/spral_ssids.f90
 spral_ssids_LINK = $(NVCCLINK)
@@ -340,6 +344,7 @@ src/ssmfe/core.$(OBJEXT): src/blas_iface.$(OBJEXT) \
 								  src/lapack_iface.$(OBJEXT)
 src/ssmfe/expert.$(OBJEXT): src/ssmfe/core.$(OBJEXT)
 src/ssmfe/ssmfe.$(OBJEXT): src/ssmfe/expert.$(OBJEXT)
+driver/spral_ics.$(OBJEXT): libspral.a
 driver/spral_ssids.$(OBJEXT): libspral.a
 
 # CUDA header deps
