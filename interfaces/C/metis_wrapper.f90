@@ -17,7 +17,7 @@ integer(C_INT) function spral_metis_order(n, ptr, row, perm, invp, base) &
    if(base.eq.0) then
       allocate(ptr2(n+1), row2(ptr(n+1)))
       ptr2(1:n+1) = ptr(1:n+1) + 1
-      row2(1:ptr2(n+1)-1) = row(1:ptr2(n+1)-1)
+      row2(1:ptr2(n+1)-1) = row(1:ptr2(n+1)-1) + 1
       call metis_order(n, ptr2, row2, perm, invp, spral_metis_order, stat)
       perm(:) = perm(:) - 1
       invp(:) = invp(:) - 1

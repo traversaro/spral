@@ -25,7 +25,7 @@ module spral_rutherford_boeing_ciface
       !   use :: iso_c_binding
       !   character(C_CHAR), dimension(*), intent(in) :: string
       !end function strlen
-      integer(C_SIZE_T) pure function strlen(string) bind(C)
+      integer(C_SIZE_T) function strlen(string) bind(C, name="strlen")
          use :: iso_c_binding
          type(C_PTR), value :: string
       end function strlen
@@ -89,12 +89,13 @@ integer(C_INT) function spral_rb_read_i32d(filename, handle, m, n, ptr, row, &
    type(rb_reader_options) :: foptions
    logical :: cindexed
 
-   integer :: i
+   integer :: i, slen
    character(C_CHAR), dimension(:), pointer :: string
 
    ! Handle filename
-   allocate(character(len=strlen(C_LOC(filename))) :: ffilename)
-   do i = 1, int(strlen(C_LOC(filename)))
+   slen = int(strlen(C_LOC(filename)))
+   allocate(character(len=slen) :: ffilename)
+   do i = 1, slen
       ffilename(i:i) = filename(i)
    end do
    ! Create object to store data in
