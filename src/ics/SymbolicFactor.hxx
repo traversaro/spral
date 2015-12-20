@@ -5,12 +5,12 @@
 namespace spral {
 namespace ics {
 
-class symbolic {
+class SymbolicFactor {
 
 /* Only routine constructs symbolic factorization from matrix data */
 public:
-   symbolic (int n, int ptr[], int row[], int nemin);
-   ~symbolic () {
+   SymbolicFactor (int n, int ptr[], int row[], int nemin);
+   ~SymbolicFactor () {
       if(perm_) delete[] perm_;
       if(sptr_) free(sptr_); // Allocated by malloc in C interface fn
       if(sparent_) free(sparent_); // Allocated by malloc in C interface fn

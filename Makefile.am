@@ -44,8 +44,10 @@ endif
 
 # ICS
 libspral_a_SOURCES += \
-	src/ics/symbolic.cxx \
-	src/ics/symbolic.hxx
+	src/ics/NumericFactor.cxx \
+	src/ics/NumericFactor.hxx \
+	src/ics/SymbolicFactor.cxx \
+	src/ics/SymbolicFactor.hxx
 bin_PROGRAMS = spral_ics
 spral_ics_SOURCES = driver/spral_ics.cxx
 

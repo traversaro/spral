@@ -1,7 +1,8 @@
 #include <time.h>
 
 #include "spral.h"
-#include "src/ics/symbolic.hxx"
+#include "src/ics/SymbolicFactor.hxx"
+#include "src/ics/NumericFactor.hxx"
 
 float tdiff(const struct timespec &t1, const struct timespec &t2) {
    return t2.tv_sec - t1.tv_sec + 1e-9*(t2.tv_nsec - t1.tv_nsec);
@@ -25,17 +26,24 @@ int main(void) {
    printf("ok\n");
 
    /* Analyse */
-   printf("Analyse...");
+   printf("\nAnalyse...");
    struct timespec t1, t2;
    clock_gettime(CLOCK_REALTIME, &t1);
-   spral::ics::symbolic afact(n, ptr, row, 8);
+   spral::ics::SymbolicFactor sfact(n, ptr, row, 1);
    clock_gettime(CLOCK_REALTIME, &t2);
    printf("ok\n");
    printf("Analyse took %e\n", tdiff(t1, t2));
-   printf("Predicted nfact = %.2le\n", (double) afact.nfact);
-   printf("Predicted nflop = %.2le\n", (double) afact.nflop);
+   printf("Predicted nfact = %.2le\n", (double) sfact.nfact);
+   printf("Predicted nflop = %.2le\n", (double) sfact.nflop);
 
    /* Factorize */
+   printf("\nFactorize...");
+   clock_gettime(CLOCK_REALTIME, &t1);
+   spral::ics::NumericFactor nfact(sfact, n, ptr, row, val);
+   clock_gettime(CLOCK_REALTIME, &t2);
+   printf("ok\n");
+   printf("Factorize took %e\n", tdiff(t1, t2));
+
    /* Solve */
 
    /* Cleanup */

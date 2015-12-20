@@ -1,4 +1,4 @@
-#include "symbolic.hxx"
+#include "SymbolicFactor.hxx"
 
 #include <stdexcept>
 
@@ -42,7 +42,7 @@ namespace spral {
 namespace ics {
 
 /* Constructs symbolic factorization from matrix data */
-symbolic::symbolic (int n, int ptr[], int row[], int nemin) :
+SymbolicFactor::SymbolicFactor (int n, int ptr[], int row[], int nemin) :
       nemin(nemin), nfact(0), nflop(0), n_(n), nnodes_(0), perm_(nullptr),
       sptr_(nullptr), sparent_(nullptr), rptr_(nullptr), rlist_(nullptr) {
 
