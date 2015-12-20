@@ -32,8 +32,8 @@ int main(void) {
    clock_gettime(CLOCK_REALTIME, &t2);
    printf("ok\n");
    printf("Analyse took %e\n", tdiff(t1, t2));
-   printf("Predicted nfact = %ld\n", afact.nfact);
-   printf("Predicted nflop = %ld\n", afact.nflop);
+   printf("Predicted nfact = %.2le\n", (double) afact.nfact);
+   printf("Predicted nflop = %.2le\n", (double) afact.nflop);
 
    /* Factorize */
    /* Solve */

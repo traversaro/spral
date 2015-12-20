@@ -19,7 +19,7 @@ public:
    }
 
    /* Information */
-   int nemin;
+   const int nemin;
    long nfact, nflop;
 
 protected:

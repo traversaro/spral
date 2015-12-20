@@ -43,8 +43,8 @@ namespace ics {
 
 /* Constructs symbolic factorization from matrix data */
 symbolic::symbolic (int n, int ptr[], int row[], int nemin) :
-      n_(n), nnodes_(0), perm_(nullptr), sptr_(nullptr), sparent_(nullptr),
-      rptr_(nullptr), rlist_(nullptr), nemin(nemin), nfact(0), nflop(0) {
+      nemin(nemin), nfact(0), nflop(0), n_(n), nnodes_(0), perm_(nullptr),
+      sptr_(nullptr), sparent_(nullptr), rptr_(nullptr), rlist_(nullptr) {
 
    /* Perform METIS ordering */
    perm_ = new int[n];
