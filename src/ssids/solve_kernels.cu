@@ -482,6 +482,12 @@ void __global__ assemble(int m, int nelim, int const* list, double *xlocal,
    else           (*xstack)[idx-nelim] = val;
 }
 
+// FIXME: move to common header?
+struct assemble_blk_type {
+   int cp;
+   int blk;
+};
+
 struct assemble_lookup {
    int m;
    int xend;
@@ -492,13 +498,73 @@ struct assemble_lookup {
    int nchild;
    int const* clen;
    int * const* clists;
+   int * const* clists_direct;
    int cvalues_offset;
    int first; // First index of node. Used to shortcut searching
 };
 
-/* Each thread looks after exactly one entry of x only */
-void __global__ assemble_lvl(double *xlocal,
-      double **xstack, const double *x, double * const* cvalues,
+struct assemble_lookup2 {
+   int m;
+   int nelim;
+   int x_offset;
+   int *const* list;
+   int cvparent;
+   int cvchild;
+   int sync_offset;
+   int sync_waitfor;
+};
+
+void __device__ wait_for_sync(int tid, volatile int *sync, int target) {
+   if(tid==0) {
+      while(*sync < target) {}
+   }
+   __syncthreads();
+}
+
+void __global__ assemble_lvl(struct assemble_lookup2 *lookup, struct assemble_blk_type *blkdata, double *xlocal, int *next_blk, int *sync, double * const* cvalues) {
+   int __shared__ thisblk;
+   if(threadIdx.x==0)
+      thisblk = atomicAdd(next_blk, 1);
+   __syncthreads();
+
+   blkdata += thisblk;
+   lookup += blkdata->cp;
+
+   int blk = blkdata->blk;
+   int m = lookup->m;
+   int nelim = lookup->nelim;
+   double *xparent = cvalues[lookup->cvparent];
+   volatile const double *xchild = cvalues[lookup->cvchild];
+   const int * list = *(lookup->list);
+   xlocal += lookup->x_offset;
+
+   // Wait for previous children to complete
+   wait_for_sync(threadIdx.x, &sync[lookup->sync_offset], lookup->sync_waitfor);
+
+   // Add block increments
+   m = MIN(ASSEMBLE_NB, m-blk*ASSEMBLE_NB);
+   list += blk*ASSEMBLE_NB;
+   xchild += blk*ASSEMBLE_NB;
+
+   // Perform actual assembly
+   for(int i=threadIdx.x; i<m; i+=blockDim.x) {
+      int j = list[i];
+      if(j < nelim) {
+         xlocal[j] += xchild[i];
+      } else {
+         xparent[j-nelim] += xchild[i];
+      }
+   }
+
+   // Wait for all threads to complete, then increment sync object
+   __threadfence();
+   __syncthreads();
+   if(threadIdx.x==0) {
+      atomicAdd(&sync[lookup->sync_offset], 1);
+   }
+}
+
+void __global__ grabx(double *xlocal, double **xstack, const double *x,
       struct assemble_lookup *lookup) {
 
    lookup += blockIdx.x;
@@ -509,39 +575,25 @@ void __global__ assemble_lvl(double *xlocal,
          xstack[lookup->contrib_idx]+lookup->contrib_offset :
          NULL;
    xlocal += lookup->x_offset;
-   int nchild = lookup->nchild;
-   int const* clen = lookup->clen;
-   int * const* clists = lookup->clists;
-   cvalues += lookup->cvalues_offset;
 
    int row = lookup->list[threadIdx.x];
 
-   /* Accumulate contribution */
-   double val=0;
-   for(int child=0; child<nchild; child++) {
-      const int *clist = clists[child];
-      const double *cval = cvalues[child];
-      /* Note: If we want to optimize this, try fixing the upper bound, but
-         beware: delays can cause the child rlist to be out of order! */
-      for(int i=0; i<clen[child]; i++) {
-         if(clist[i] == row) {
-            val += cval[i];
-         }
-      }
-   }
-
-   /* Add to x or xstack as appropriate */
-   if(threadIdx.x<xend) xlocal[threadIdx.x] = x[row] + val;
-   else                 contrib[threadIdx.x] = val;
+   if(threadIdx.x<xend) xlocal[threadIdx.x] = x[row];
+   else                 contrib[threadIdx.x] = 0.0;
 }
 
 struct lookups_gpu_fwd {
    int nassemble;
+   int nasm_sync;
+   int nassemble2;
+   int nasmblk;
    int ntrsv;
    int ngemv;
    int nreduce;
    int nscatter;
    struct assemble_lookup *assemble;
+   struct assemble_lookup2 *assemble2;
+   struct assemble_blk_type *asmblk;
    struct trsv_lookup *trsv;
    struct gemv_notrans_lookup *gemv;
    struct reduce_notrans_lookup *reduce;
@@ -561,43 +613,60 @@ extern "C" {
 void spral_ssids_run_fwd_solve_kernels(bool posdef,
       struct lookups_gpu_fwd const* gpu, double *xlocal_gpu,
       double **xstack_gpu, double *x_gpu, double ** cvalues_gpu,
-      double *work_gpu, int nsync, int *sync, const cudaStream_t *stream) {
+      double *work_gpu, int nsync, int *sync, int nasm_sync, int *asm_sync,
+      const cudaStream_t *stream) {
 
-   if(nsync>0) trsv_init <<<nsync, 1, 0, *stream>>> (sync);
-   assemble_lvl
-      <<<gpu->nassemble, ASSEMBLE_NB, 0, *stream>>>
-      (xlocal_gpu, xstack_gpu, x_gpu, cvalues_gpu, gpu->assemble);
+   if(nsync>0) {
+      for(int i=0; i<nsync; i+=65535)
+         trsv_init <<<MIN(65535,nsync-i), 1, 0, *stream>>> (sync+2*i);
+      CudaCheckError();
+   }
+   for(int i=0; i<gpu->nassemble; i+=65535)
+      grabx
+         <<<MIN(65535,gpu->nassemble-i), ASSEMBLE_NB, 0, *stream>>>
+         (xlocal_gpu, xstack_gpu, x_gpu, gpu->assemble+i);
+   cudaMemset(asm_sync, 0, (1+gpu->nasm_sync)*sizeof(int));
+   for(int i=0; i<gpu->nasmblk; i+=65535)
+      assemble_lvl
+         <<<MIN(65535,gpu->nasmblk-i), ASSEMBLE_NB, 0, *stream>>>
+         (gpu->assemble2, gpu->asmblk, xlocal_gpu, &asm_sync[0], &asm_sync[1], cvalues_gpu);
    CudaCheckError();
    if(gpu->ntrsv>0) {
       if(posdef) {
-         trsv_ln_exec
-            <double,TRSV_NB_TASK,THREADSX_TASK,THREADSY_TASK,false>
-            <<<gpu->ntrsv, dim3(THREADSX_TASK,THREADSY_TASK), 0, *stream>>>
-            (xlocal_gpu, sync, gpu->trsv);
+         for(int i=0; i<gpu->ntrsv; i+=65535)
+            trsv_ln_exec
+               <double,TRSV_NB_TASK,THREADSX_TASK,THREADSY_TASK,false>
+               <<<MIN(65535,gpu->ntrsv-i), dim3(THREADSX_TASK,THREADSY_TASK), 0, *stream>>>
+               (xlocal_gpu, sync, gpu->trsv+i);
       } else {
-         trsv_ln_exec
-            <double,TRSV_NB_TASK,THREADSX_TASK,THREADSY_TASK,true>
-            <<<gpu->ntrsv, dim3(THREADSX_TASK,THREADSY_TASK), 0, *stream>>>
-            (xlocal_gpu, sync, gpu->trsv);
+         for(int i=0; i<gpu->ntrsv; i+=65535)
+            trsv_ln_exec
+               <double,TRSV_NB_TASK,THREADSX_TASK,THREADSY_TASK,true>
+               <<<MIN(65535,gpu->ntrsv-i), dim3(THREADSX_TASK,THREADSY_TASK), 0, *stream>>>
+               (xlocal_gpu, sync, gpu->trsv+i);
       }
       CudaCheckError();
    }
    if(gpu->ngemv>0) {
-      simple_gemv_lookup
-         <GEMV_THREADSX, GEMV_THREADSY, GEMV_NX, GEMV_NY>
-         <<<gpu->ngemv, dim3(GEMV_THREADSX,GEMV_THREADSY), 0, *stream>>>
-         (xlocal_gpu, work_gpu, gpu->gemv);
+      for(int i=0; i<gpu->ngemv; i+=65535)
+         simple_gemv_lookup
+            <GEMV_THREADSX, GEMV_THREADSY, GEMV_NX, GEMV_NY>
+            <<<MIN(65535,gpu->ngemv-i), dim3(GEMV_THREADSX,GEMV_THREADSY), 0, *stream>>>
+            (xlocal_gpu, work_gpu, gpu->gemv+i);
       CudaCheckError();
    }
    if(gpu->nreduce>0) {
+      if((gpu->nreduce + 4 - 1) / 4 > 65535)
+         printf("Unhandled error! fwd solve gemv_reduce_lookup()\n");
       gemv_reduce_lookup
          <<<dim3((gpu->nreduce + 4 - 1) / 4), dim3(GEMV_NX, 4), 0, *stream>>>
          (work_gpu, cvalues_gpu, gpu->nreduce, gpu->reduce);
       CudaCheckError();
    }
-   scatter
-      <<<gpu->nscatter, SCATTER_NB, 0, *stream>>>
-      (gpu->scatter, xlocal_gpu, x_gpu);
+   for(int i=0; i<gpu->nscatter; i+=65535)
+      scatter
+         <<<MIN(65535,gpu->nscatter-i), SCATTER_NB, 0, *stream>>>
+         (gpu->scatter+i, xlocal_gpu, x_gpu);
    CudaCheckError();
 }
 
@@ -618,49 +687,59 @@ void spral_ssids_run_bwd_solve_kernels(bool dsolve, bool unit_diagonal,
       struct lookups_gpu_bwd *gpu, const cudaStream_t *stream) {
 
    /* === Kernel Launches === */
-   if(nsync>0) trsv_init <<<nsync, 1, 0, *stream>>> (sync_gpu);
+   if(nsync>0) {
+      for(int i=0; i<nsync; i+=65535)
+         trsv_init <<<MIN(65535,nsync-i), 1, 0, *stream>>> (sync_gpu+2*i);
+      CudaCheckError();
+   }
    if(gpu->ngemv>0) {
-      gemv_transpose_sps_rhs
-         <TRSM_TR_THREADSX, TRSM_TR_THREADSY, TRSM_TR_NBX, TRSM_TR_NBY>
-         <<<gpu->ngemv, dim3(TRSM_TR_THREADSX,TRSM_TR_THREADSY), 0, *stream>>>
-         (gpu->gemv, x_gpu, work_gpu);
+      for(int i=0; i<gpu->ngemv; i+=65535)
+         gemv_transpose_sps_rhs
+            <TRSM_TR_THREADSX, TRSM_TR_THREADSY, TRSM_TR_NBX, TRSM_TR_NBY>
+            <<<MIN(65535,gpu->ngemv-i), dim3(TRSM_TR_THREADSX,TRSM_TR_THREADSY), 0, *stream>>>
+            (gpu->gemv+i, x_gpu, work_gpu);
       CudaCheckError();
    }
 
    if(gpu->nrds>0) {
       if(dsolve) {
-         reducing_d_solve
-            <REDUCING_D_SOLVE_THREADS_PER_BLOCK, true>
-            <<<gpu->nrds, REDUCING_D_SOLVE_THREADS_PER_BLOCK, 0, *stream>>>
-            (gpu->rds, work_gpu, x_gpu);
+         for(int i=0; i<gpu->nrds; i+=65535)
+            reducing_d_solve
+               <REDUCING_D_SOLVE_THREADS_PER_BLOCK, true>
+               <<<MIN(65535,gpu->nrds-i), REDUCING_D_SOLVE_THREADS_PER_BLOCK, 0, *stream>>>
+               (gpu->rds+i, work_gpu, x_gpu);
       } else {
-         reducing_d_solve
-            <REDUCING_D_SOLVE_THREADS_PER_BLOCK, false>
-            <<<gpu->nrds, REDUCING_D_SOLVE_THREADS_PER_BLOCK, 0, *stream>>>
-            (gpu->rds, work_gpu, x_gpu);
+         for(int i=0; i<gpu->nrds; i+=65535)
+            reducing_d_solve
+               <REDUCING_D_SOLVE_THREADS_PER_BLOCK, false>
+               <<<MIN(65535,gpu->nrds-i), REDUCING_D_SOLVE_THREADS_PER_BLOCK, 0, *stream>>>
+               (gpu->rds+i, work_gpu, x_gpu);
       }
       CudaCheckError();
    }
 
    if(gpu->ntrsv>0) {
       if(unit_diagonal) {
-         trsv_lt_exec
-            <double,TRSV_NB_TASK,THREADSX_TASK,THREADSY_TASK,true>
-            <<<gpu->ntrsv, dim3(THREADSX_TASK,THREADSY_TASK), 0, *stream>>>
-            (gpu->trsv, work_gpu, sync_gpu);
+         for(int i=0; i<gpu->ntrsv; i+=65535)
+            trsv_lt_exec
+               <double,TRSV_NB_TASK,THREADSX_TASK,THREADSY_TASK,true>
+               <<<MIN(65535,gpu->ntrsv-i), dim3(THREADSX_TASK,THREADSY_TASK), 0, *stream>>>
+               (gpu->trsv+i, work_gpu, sync_gpu);
       } else {
-         trsv_lt_exec
-            <double,TRSV_NB_TASK,THREADSX_TASK,THREADSY_TASK,false>
-            <<<gpu->ntrsv, dim3(THREADSX_TASK,THREADSY_TASK), 0, *stream>>>
-            (gpu->trsv, work_gpu, sync_gpu);
+         for(int i=0; i<gpu->ntrsv; i+=65535)
+            trsv_lt_exec
+               <double,TRSV_NB_TASK,THREADSX_TASK,THREADSY_TASK,false>
+               <<<MIN(65535,gpu->ntrsv-i), dim3(THREADSX_TASK,THREADSY_TASK), 0, *stream>>>
+               (gpu->trsv+i, work_gpu, sync_gpu);
       }
       CudaCheckError();
    }
 
    if(gpu->nscatter>0) {
-      scatter
-         <<<gpu->nscatter, SCATTER_NB, 0, *stream>>>
-         (gpu->scatter, work_gpu, x_gpu);
+      for(int i=0; i<gpu->nscatter; i+=65535)
+         scatter
+            <<<MIN(65535,gpu->nscatter-i), SCATTER_NB, 0, *stream>>>
+            (gpu->scatter+i, work_gpu, x_gpu);
       CudaCheckError();
    }
 }

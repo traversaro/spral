@@ -26,6 +26,9 @@ integer(C_INT) function spral_core_analyse_basic_analyse(n, ptr, row, perm, &
    integer(C_INT), dimension(:), pointer :: psptr, psparent, prlist
    integer(C_LONG), dimension(:), pointer :: prptr
 
+   integer(C_INT) :: dummy_int
+   integer(C_LONG) :: dummy_long
+
    interface
       type(C_PTR) function malloc(sz) bind(C)
          use iso_c_binding
@@ -51,22 +54,22 @@ integer(C_INT) function spral_core_analyse_basic_analyse(n, ptr, row, perm, &
    endif
 
    if(allocated(fsptr)) then
-      csptr = malloc(C_SIZEOF(fsptr))
+      csptr = malloc(size(fsptr)*C_SIZEOF(dummy_int))
       call C_F_POINTER(csptr, psptr, shape(fsptr))
       psptr(:) = fsptr(:)
    endif
    if(allocated(fsparent)) then
-      csparent = malloc(C_SIZEOF(fsparent))
+      csparent = malloc(size(fsparent)*C_SIZEOF(dummy_int))
       call C_F_POINTER(csparent, psparent, shape(fsparent))
       psparent(:) = fsparent(:)
    endif
    if(allocated(frptr)) then
-      crptr = malloc(C_SIZEOF(frptr))
+      crptr = malloc(size(frptr)*C_SIZEOF(dummy_long))
       call C_F_POINTER(crptr, prptr, shape(frptr))
       prptr(:) = frptr(:)
    endif
    if(allocated(frlist)) then
-      crlist = malloc(C_SIZEOF(frlist))
+      crlist = malloc(size(frlist)*C_SIZEOF(dummy_int))
       call C_F_POINTER(crlist, prlist, shape(frlist))
       prlist(:) = frlist(:)
    endif

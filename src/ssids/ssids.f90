@@ -20,7 +20,10 @@ module spral_ssids
                                  convert_coord_to_cscl, clean_cscl_oop, &
                                  apply_conversion_map
    use spral_metis_wrapper, only : metis_order
-   use spral_scaling, only : auction_scale, equilib_scale, hungarian_scale
+   use spral_scaling, only : auction_scale_sym, equilib_scale_sym, &
+                             hungarian_scale_sym, &
+                             equilib_options, equilib_inform, &
+                             hungarian_options, hungarian_inform
    use spral_ssids_alloc, only : smalloc_setup, smalloc, smfreeall
    use spral_ssids_analyse, only : analyse_phase, check_order, expand_matrix, &
                                    expand_pattern
@@ -44,8 +47,7 @@ module spral_ssids
              ssids_free,            & ! Free akeep and/or fkeep
              ssids_enquire_posdef,  & ! Pivot information in posdef case
              ssids_enquire_indef,   & ! Pivot information in indef case
-             ssids_alter,           & ! Alter diagonal
-             ssids_move_data          ! Move data to/from GPU as approriate
+             ssids_alter              ! Alter diagonal
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -686,6 +688,13 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
    ! comments)
    type(smalloc_type), pointer :: next_alloc
    integer :: matrix_type
+   real(wp), dimension(:), allocatable :: scaling
+
+   ! Types related to scaling routines
+   type(hungarian_options) :: hsoptions
+   type(hungarian_inform) :: hsinform
+   type(equilib_options) :: esoptions
+   type(equilib_inform) :: esinform
    
    integer :: flag
 
@@ -835,42 +844,68 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
          end do
       end if
    case(1) ! Matching-based scaling by Hungarian Algorithm (MC64 algorithm)
+      ! Allocate space for scaling
+      allocate(scaling(n), stat=st)
+      if(st.ne.0) goto 10
+      ! Run Hungarian algorithm
+      hsoptions%scale_if_singular = options%action
       if (akeep%check) then
-         call hungarian_scale(n, akeep%ptr, akeep%row, val2,  &
-            fkeep%scaling, akeep%invp, st, options%action, sing)
+         call hungarian_scale_sym(n, akeep%ptr, akeep%row, val2, scaling, &
+            hsoptions, hsinform)
       else
-         call hungarian_scale(n, ptr, row, val, fkeep%scaling, akeep%invp, &
-            st, options%action, sing)
+         call hungarian_scale_sym(n, ptr, row, val, scaling, &
+            hsoptions, hsinform)
       end if
-      if (st .ne. 0) go to 10
-
-      if (sing) then
+      select case(hsinform%flag)
+      case(-1)
+         ! Allocation error
+         st = hsinform%stat
+         go to 10
+      case(-2)
+         ! Structually singular matrix and control%action=.false.
          inform%flag = SSIDS_ERROR_SINGULAR
          call ssids_print_flag(context,nout,inform%flag)
          fkeep%flag = inform%flag
          return
-      end if
+      end select
+      ! Permute scaling to correct order
+      do i = 1, n
+         fkeep%scaling(i) = scaling(akeep%invp(i))
+      end do
+      ! Copy scaling(:) to user array scale(:) if present
       if (present(scale)) then
-         do i = 1, n
-            scale(akeep%invp(i)) = fkeep%scaling(i)
-         end do
+         scale(1:n) = scaling(1:n)
       end if
+      ! Cleanup memory
+      deallocate(scaling, stat=st)
 
    case(2) ! Matching-based scaling by Auction Algorithm
+      ! Allocate space for scaling
+      allocate(scaling(n), stat=st)
+      if(st.ne.0) goto 10
+      ! Run auction algorithm
       if (akeep%check) then
-         call auction_scale(n, akeep%ptr, akeep%row, val2, akeep%invp, &
-            fkeep%scaling, options%auction, inform%auction, flag, st)
+         call auction_scale_sym(n, akeep%ptr, akeep%row, val2, scaling, &
+            options%auction, inform%auction)
       else
-         call auction_scale(n, ptr, row, val, akeep%invp, &
-            fkeep%scaling, options%auction, inform%auction, flag, st)
+         call auction_scale_sym(n, ptr, row, val, scaling, &
+            options%auction, inform%auction)
       end if
-      if (flag .ne. 0) go to 10 ! only possible error is allocation failed
-
+      if (inform%auction%flag .ne. 0) then
+         ! only possible error is allocation failed
+         st = inform%auction%stat
+         go to 10 
+      endif
+      ! Permute scaling to correct order
+      do i = 1, n
+         fkeep%scaling(i) = scaling(akeep%invp(i))
+      end do
+      ! Copy scaling(:) to user array scale(:) if present
       if (present(scale)) then
-         do i = 1, n
-            scale(akeep%invp(i)) = fkeep%scaling(i)
-         end do
+         scale(1:n) = scaling(1:n)
       end if
+      ! Cleanup memory
+      deallocate(scaling, stat=st)
 
    case(3) ! Scaling generated during analyse phase for matching-based order
       if (.not.allocated(akeep%scaling)) then
@@ -885,18 +920,34 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
       end do
 
    case(4:) ! Norm equilibriation algorithm (MC77 algorithm)
+      ! Allocate space for scaling
+      allocate(scaling(n), stat=st)
+      if(st.ne.0) goto 10
+      ! Run equilibriation algorithm
       if (akeep%check) then
-         call equilib_scale(n, akeep%invp, akeep%ptr, akeep%row, val2, &
-            fkeep%scaling, st)
+         call equilib_scale_sym(n, akeep%ptr, akeep%row, val2, scaling, &
+            esoptions, esinform)
       else
-         call equilib_scale(n, akeep%invp, ptr, row, val, fkeep%scaling, st)
+         call equilib_scale_sym(n, ptr, row, val, scaling, &
+            esoptions, esinform)
       end if
-      if (st .ne. 0) go to 10
+      if (esinform%flag .ne. 0) then
+         ! Only possible error is memory allocation failure
+         st = esinform%stat
+         go to 10
+      endif
+      ! Permute scaling to correct order
+      do i = 1, n
+         fkeep%scaling(i) = scaling(akeep%invp(i))
+      end do
+      ! Copy scaling(:) to user array scale(:) if present
       if (present(scale)) then
          do i = 1, n
             scale(akeep%invp(i)) = fkeep%scaling(i)
          end do
       end if
+      ! Cleanup memory
+      deallocate(scaling, stat=st)
    end select
 
    !if(allocated(fkeep%scaling)) &
@@ -975,13 +1026,13 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
    ! Copy A values to GPU
    sz = akeep%nptr(akeep%nnodes+1) - 1
    if (akeep%check) then
-      cuda_error = cudaMalloc(gpu_val, C_SIZEOF(val2(1:sz)))
+      cuda_error = cudaMalloc(gpu_val, sz*C_SIZEOF(val2(1)))
       if(cuda_error.ne.0) goto 200
-      cuda_error = cudaMemcpy_h2d(gpu_val, C_LOC(val2), C_SIZEOF(val2(1:sz)))
+      cuda_error = cudaMemcpy_h2d(gpu_val, C_LOC(val2), sz*C_SIZEOF(val2(1)))
    else
-      cuda_error = cudaMalloc(gpu_val, C_SIZEOF(val(1:sz)))
+      cuda_error = cudaMalloc(gpu_val, sz*C_SIZEOF(val(1)))
       if(cuda_error.ne.0) goto 200
-      cuda_error = cudaMemcpy_h2d(gpu_val, C_LOC(val), C_SIZEOF(val(1:sz)))
+      cuda_error = cudaMemcpy_h2d(gpu_val, C_LOC(val), sz*C_SIZEOF(val(1)))
    endif
    if(cuda_error.ne.0) goto 200
    
@@ -1025,10 +1076,10 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
    ! Call main factorization routine
    if (allocated(fkeep%scaling)) then
       ! Copy scaling vector to GPU
-      cuda_error = cudaMalloc(gpu_scaling, C_SIZEOF(fkeep%scaling(1:n)))
+      cuda_error = cudaMalloc(gpu_scaling, n*C_SIZEOF(fkeep%scaling(1)))
       if(cuda_error.ne.0) goto 200
       cuda_error = copy_to_gpu_non_target(gpu_scaling, fkeep%scaling, &
-         C_SIZEOF(fkeep%scaling(1:n)))
+         n*C_SIZEOF(fkeep%scaling(1)))
       if(cuda_error.ne.0) goto 200
 
       ! Perform factorization
@@ -1037,8 +1088,10 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
          akeep%sptr, akeep%sparent, akeep%rptr, akeep%rlist, akeep%invp,   &
          akeep%rlist_direct, akeep%gpu_rlist, akeep%gpu_rlist_direct,      &
          gpu_contribs, fkeep%stream_handle, fkeep%stream_data,             &
-         fkeep%top_data, fkeep%gpu_rlist_with_delays, fkeep%gpu_clists,    &
-         fkeep%gpu_clen, fkeep%alloc, options, stats, ptr_scale=gpu_scaling)
+         fkeep%top_data, fkeep%gpu_rlist_with_delays,                      &
+         fkeep%gpu_rlist_direct_with_delays, fkeep%gpu_clists,             &
+         fkeep%gpu_clists_direct, fkeep%gpu_clen, fkeep%alloc, options, stats, &
+         ptr_scale=gpu_scaling)
       cuda_error = cudaFree(gpu_scaling)
       if(cuda_error.ne.0) goto 200
    else
@@ -1047,8 +1100,9 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
          akeep%sptr, akeep%sparent, akeep%rptr, akeep%rlist, akeep%invp,   &
          akeep%rlist_direct, akeep%gpu_rlist, akeep%gpu_rlist_direct,      &
          gpu_contribs, fkeep%stream_handle, fkeep%stream_data,             &
-         fkeep%top_data, fkeep%gpu_rlist_with_delays, fkeep%gpu_clists,    &
-         fkeep%gpu_clen, fkeep%alloc, options, stats)
+         fkeep%top_data, fkeep%gpu_rlist_with_delays,                      &
+         fkeep%gpu_rlist_direct_with_delays, fkeep%gpu_clists,             &
+         fkeep%gpu_clists_direct, fkeep%gpu_clen, fkeep%alloc, options, stats)
    end if
 
    cuda_error = cudaFree(gpu_val)
@@ -1147,27 +1201,6 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
    return
 
 end subroutine ssids_factor_double
-
-!
-! Copies all gpu to correct locations
-!
-! FIXME: Remove when done with paper
-subroutine ssids_move_data(akeep, fkeep, options, inform)
-   type(ssids_akeep), intent(in) :: akeep
-   type(ssids_fkeep), intent(inout) :: fkeep
-   type(ssids_options), intent(in) :: options
-   type(ssids_inform), intent(inout) :: inform
-
-   integer :: nout
-   character(len=50) :: context
-
-   context = 'ssids_move_data'
-   nout = options%unit_error
-   if (options%print_level < 0) nout = -1
-
-   call ssids_move_data_inner(akeep, fkeep, options, nout, context, inform)
-
-end subroutine ssids_move_data
 
 !
 ! Copies all gpu data back to host
@@ -1290,7 +1323,7 @@ subroutine copy_stream_data_to_host(stream_data, &
       
       ptr_levL = c_ptr_plus( stream_data%values_L(lev)%ptr_levL, 0_C_SIZE_T )
       cuda_error = cudaMemcpy_d2h(C_LOC(work), ptr_levL, &
-         C_SIZEOF(work(1:level_size)))
+         level_size*C_SIZEOF(work(1)))
       if(cuda_error.ne.0) return
 
       do llist = stream_data%lvlptr(lev), stream_data%lvlptr(lev + 1) - 1
@@ -1493,24 +1526,24 @@ subroutine ssids_solve_mult_double(nrhs, x, ldx, akeep, fkeep, options, &
    else
 
      if (allocated(fkeep%scaling)) then
-       cuda_error = cudaMalloc(gpu_scale, C_SIZEOF(fkeep%scaling(1:n)))
+       cuda_error = cudaMalloc(gpu_scale, n*C_SIZEOF(fkeep%scaling(1)))
        if(cuda_error.ne.0) goto 200
        cuda_error = cudaMemcpy_h2d(gpu_scale, n, fkeep%scaling)
        if(cuda_error.ne.0) goto 200
-       cuda_error = cudaMalloc(gpu_invp, C_SIZEOF(akeep%invp(1:n)))
+       cuda_error = cudaMalloc(gpu_invp, n*C_SIZEOF(akeep%invp(1)))
        if(cuda_error.ne.0) goto 200
        cuda_error = cudaMemcpy_h2d(gpu_invp, n, akeep%invp)
        if(cuda_error.ne.0) goto 200
      end if
 
-     cuda_error = cudaMalloc(gpu_x, nrhs*C_SIZEOF(x(1:n,1)))
+     cuda_error = cudaMalloc(gpu_x, nrhs*n*C_SIZEOF(x(1,1)))
      if(cuda_error.ne.0) goto 200
      if(n.eq.ldx) then
-       cuda_error = cudaMemcpy_h2d(gpu_x, C_LOC(x), C_SIZEOF(x(1:n,1:nrhs)))
+       cuda_error = cudaMemcpy_h2d(gpu_x, C_LOC(x), nrhs*n*C_SIZEOF(x(1,1)))
        if(cuda_error.ne.0) goto 200
      else
-       cuda_error = cudaMemcpy2d(gpu_x, C_SIZEOF(x(1:n,1)), C_LOC(x), &
-         C_SIZEOF(x(1:ldx,1)), C_SIZEOF(x(1:n,1)), int(nrhs, C_SIZE_T), &
+       cuda_error = cudaMemcpy2d(gpu_x, n*C_SIZEOF(x(1,1)), C_LOC(x), &
+         ldx*C_SIZEOF(x(1,1)), n*C_SIZEOF(x(1,1)), int(nrhs, C_SIZE_T), &
          cudaMemcpyHostToDevice)
        if(cuda_error.ne.0) goto 200
      end if
@@ -1593,7 +1626,7 @@ subroutine ssids_solve_mult_double(nrhs, x, ldx, akeep, fkeep, options, &
         if(options%presolve.eq.0) then
            call bwd_solve_gpu(local_job, fkeep%pos_def, akeep%nnodes,      &
               akeep%sptr, options%nstream, fkeep%stream_handle,            &
-              fkeep%stream_data, fkeep%top_data, akeep%n, akeep%invp, x,   &
+              fkeep%stream_data, fkeep%top_data, akeep%invp, x,            &
               inform%stat, cuda_error)
            if(cuda_error.ne.0) goto 200
         else
@@ -1642,11 +1675,11 @@ subroutine ssids_solve_mult_double(nrhs, x, ldx, akeep, fkeep, options, &
       end if
 
       if(n.eq.ldx) then
-        cuda_error = cudaMemcpy_d2h(C_LOC(x), gpu_x, nrhs*C_SIZEOF(x(1:n,1)))
+        cuda_error = cudaMemcpy_d2h(C_LOC(x), gpu_x, nrhs*n*C_SIZEOF(x(1,1)))
         if(cuda_error.ne.0) goto 200
       else
-        cuda_error = cudaMemcpy2d(C_LOC(x), C_SIZEOF(x(1:ldx,1)), gpu_x, &
-          C_SIZEOF(x(1:n,1)), C_SIZEOF(x(1:n,1)), int(nrhs, C_SIZE_T), &
+        cuda_error = cudaMemcpy2d(C_LOC(x), ldx*C_SIZEOF(x(1,1)), gpu_x, &
+          n*C_SIZEOF(x(1,1)), n*C_SIZEOF(x(1,1)), int(nrhs, C_SIZE_T), &
           cudaMemcpyDeviceToHost)
         if(cuda_error.ne.0) goto 200
       end if
@@ -1873,7 +1906,7 @@ subroutine ssids_enquire_indef_double(akeep, fkeep, options, inform, &
          offset = blkm*(blkn+0_long)
          srcptr = c_ptr_plus(nptr%gpu_lcol, offset*C_SIZEOF(real_dummy))
          cuda_error = cudaMemcpy_d2h(C_LOC(d2), srcptr, &
-            C_SIZEOF(d2(1:2*nptr%nelim)))
+            2*nptr%nelim*C_SIZEOF(d2(1)))
          if(cuda_error.ne.0) goto 200
          do while(j .le. nptr%nelim)
             if (d2(2*j).ne.0) then
@@ -2030,7 +2063,7 @@ subroutine ssids_alter_double(d, akeep, fkeep, options, inform)
          srcptr = c_ptr_plus(fkeep%nodes(node)%gpu_lcol, &
             blkm*(blkn+0_long)*C_SIZEOF(real_dummy))
          cuda_error = cudaMemcpy_h2d(srcptr, C_LOC(d2), &
-            C_SIZEOF(d2(1:2*nptr%nelim)))
+            2*nptr%nelim*C_SIZEOF(d2(1)))
          if(cuda_error.ne.0) goto 200
       end do
    endif
@@ -2128,6 +2161,11 @@ subroutine free_fkeep_double(fkeep, cuda_error)
       if(cuda_error.ne.0) return
    endif
    if(C_ASSOCIATED(fkeep%gpu_clists)) then
+      cuda_error = cudaFree(fkeep%gpu_clists)
+      fkeep%gpu_clists = C_NULL_PTR
+      if(cuda_error.ne.0) return
+   endif
+   if(C_ASSOCIATED(fkeep%gpu_clists_direct)) then
       cuda_error = cudaFree(fkeep%gpu_clists)
       fkeep%gpu_clists = C_NULL_PTR
       if(cuda_error.ne.0) return

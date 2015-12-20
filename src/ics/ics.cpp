@@ -1,6 +1,4 @@
-extern "C" {
 #include "spral.h"
-}
 
 #include <cstddef>
 #include <stdexcept>

@@ -86,7 +86,7 @@ program run_prob
    ! Analyse and factor
    call system_clock(start_t, rate_t)
    call ssids_analyse(.false., n, ptr, row, akeep, &
-      options, inform)
+      options, inform, val=val)
    call system_clock(stop_t)
    print *, "Used order ", options%ordering
    if (inform%flag < 0) then
@@ -127,9 +127,6 @@ program run_prob
    write(*, "(a)") "ok"
    print *, "Factor took ", (stop_t - start_t)/real(rate_t)
    smfact = (stop_t - start_t)/real(rate_t)
-
-   ! Copy data from device to host
-   call ssids_move_data(akeep, fkeep, options, inform)
 
    ! Solve
    write(*, "(a)") "Solve..."
@@ -190,6 +187,9 @@ contains
          call get_command_argument(argnum, argval)
          argnum = argnum + 1
          select case(argval)
+         case("--scale=none")
+            options%scaling = 0 ! None
+            print *, "Set scaling to None"
          case("--scale=mc64")
             options%scaling = 1 ! MC64
             print *, "Set scaling to MC64"
@@ -199,6 +199,10 @@ contains
          case("--scale=mc77")
             options%scaling = 4 ! MC77 algorithm
             print *, "Set scaling to MC77"
+         case("--ordering=mc64-metis")
+            options%ordering = 2 ! Matching-based ordering
+            options%scaling = 3 ! Scaling from matching ordering
+            print *, "Using matching-based ordering (scaling overwritten)"
          case("--pos")
             pos_def = .true.
             print *, 'Matrix assumed positive definite'
@@ -216,6 +220,11 @@ contains
             argnum = argnum + 1
             read( argval, * ) nrhs
             print *, 'solving for', nrhs, 'right-hand sides'         
+         case("--u")
+            call get_command_argument(argnum, argval)
+            argnum = argnum + 1
+            read( argval, * ) options%u
+            print *, 'Pivoting threshold u = ', options%u
          case("--nstream")
             call get_command_argument(argnum, argval)
             argnum = argnum + 1
@@ -234,43 +243,40 @@ contains
       real(wp), dimension(ptr(n+1)-1), intent(in) :: val
       real(wp), dimension(n), intent(out) :: scaling
 
-      integer :: i, st, flag
-      integer, dimension(:), allocatable :: invp
+      integer :: i
       logical :: sing
       type(auction_inform) :: ainform
+      type(equilib_options) :: eoptions
+      type(equilib_inform) :: einform
+      type(hungarian_options) :: hoptions
+      type(hungarian_inform) :: hinform
 
       write(*, "(a)") "Scaling..."
-
-      ! Set invp to be identity
-      allocate(invp(n))
-      do i = 1, n
-         invp(i) = i
-      end do
 
       call system_clock(start_t, rate_t)
       ! Note: we assume no checking required
       select case(options%scaling)
       case(1) ! Hungarian algorithm
-         call hungarian_scale(n, ptr, row, val, scaling, invp, st, .true., &
-            sing)
-         if(st.ne.0) then
-            print *, "Stat error from hungarian_scale()"
+         hoptions%scale_if_singular = .true.
+         call hungarian_scale_sym(n, ptr, row, val, scaling, hoptions, hinform)
+         if(hinform%flag.le.0) then
+            print *, "Error from hungarian_scale_sym()"
             stop
          endif
       case(2) ! Auction algorithm
-         call auction_scale(n, ptr, row, val, invp, scaling, options%auction, &
-            ainform, flag, st)
-         if(flag.ne.0) then
-            print *, "Error from auction_scale() flag = ", flag
+         call auction_scale_sym(n, ptr, row, val, scaling, &
+            options%auction, ainform)
+         if(ainform%flag.ne.0) then
+            print *, "Error from auction_scale_sym() flag = ", ainform%flag
             stop
          endif
       case(3) ! From ordering
          print *, "--time-scaling not supported with matching-based ordering"
          stop
       case(4) ! MC77-like
-         call equilib_scale(n, invp, ptr, row, val, scaling, st)
-         if(st.ne.0) then
-            print *, "Stat error from equilib_scale()"
+         call equilib_scale_sym(n, ptr, row, val, scaling, eoptions, einform)
+         if(einform%flag.ne.0) then
+            print *, "Error from equilib_scale_sym()"
             stop
          endif
       end select

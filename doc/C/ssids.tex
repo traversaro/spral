@@ -161,11 +161,11 @@ The following pseudo-code illustrates this.
       spral_ssids_default_options(&options);
       ...
 \end{verbatim}
-The components of {\tt ssids\_options} and {\tt ssids\_inform} are explained
+The components of {\tt spral\_ssids\_options} and {\tt spral\_ssids\_inform} are explained
 in Sections~\ref{ssids: typeoptions} and \ref{ssids: typeinform}.
 The \texttt{void~*} pointers are allocated using Fortran, and must be passed to
-\texttt{ssids\_free\_akeep()}, \texttt{ssids\_free\_fkeep} and/or
-\texttt{ssids\_free()} to free the associated memory.
+\texttt{spral\_ssids\_free\_akeep()}, \texttt{spral\_ssids\_free\_fkeep()} and/or
+\texttt{spral\_ssids\_free()} to free the associated memory.
 
 \subsection{Achieving bit-compatibility} \label{ssids: bitcompat}
 Care has been taken to ensure bit-compatibility is achieved using this solver.
@@ -217,8 +217,8 @@ To illustrate the CSC format, the following arrays describe the matrix shown in
 Figure~\ref{ssids: format eg}.
 \begin{verbatim}
    int n = 5;
-   int ptr[]    = { 1,             4,   5,        7,        9,    10 };
-   int row[]    = { 1,   2,   4,   3,   3,   5,   4,   5,   5 };
+   int ptr[]    = { 0,             3,   4,        6,        8,    9 };
+   int row[]    = { 0,   1,   3,   2,   2,   4,   3,   4,   4 };
    double val[] = { 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9 };
 \end{verbatim}
 
@@ -630,7 +630,7 @@ Note that this routine is not compatabile with the option \texttt{options.presol
 %%%%%%%%%%% options type %%%%%%%%%%%
 
 \section{Derived types}
-\subsection{\texttt{ssids\_options}}
+\subsection{\texttt{struct spral\_ssids\_options}}
 \label{ssids: typeoptions}
 
 The structure {\tt spral\_ssids\_options} is used to specify the options used
@@ -798,7 +798,7 @@ Values outside the range $[0,0.5]$ are treated as the closest value in that rang
 
 %%%%%%%%%%% inform type %%%%%%%%%%%
 
-\subsection{The derived data type for holding information}
+\subsection{\texttt{struct spral\_ssids\_inform}}
 \label{ssids: typeinform}
 The structure {\tt spral\_ssids\_inform}
 is used to hold parameters that give information about the progress and needs
