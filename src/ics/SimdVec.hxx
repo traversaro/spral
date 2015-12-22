@@ -21,11 +21,11 @@ template <typename T, //< Underlying type e.g. int or double
 class SimdVec;
 
 template <>
-class SimdVec<double,
+class SimdVec<int,
 #if defined(__AVX2__) || defined(__AVX__)
               128
 #else
-              8*sizeof(int)
+              8*sizeof(int) // 8 bits to a byte
 #endif
              > {
 #if defined(__AVX2__) || defined(__AVX__)
@@ -49,6 +49,10 @@ class SimdVec<double,
    {}
 
 private:
+   template <typename T_, int length_>
+   friend class SimdVec;
+
+   typedef SimdVec<int, vector_length*8*sizeof(int)> simd_index_type;
    /// Underlying vector that this type wraps
    simd_int_type val;
 };
@@ -95,16 +99,18 @@ public:
       val = initial_value;
 #endif
    }
-   /// Initialize with underlying vector type
+#if defined(__AVX2__) || defined(__AVX__)
+   /// Initialize with underlying vector type (no version for scalar)
    SimdVec(const simd_double_type &initial_value) {
       val = initial_value;
    }
+#endif
    /// Initialize with another SimdVec
    SimdVec(const SimdVec<double> &initial_value) {
       val = initial_value.val;
    }
 #if defined(__AVX2__) || defined(__AVX__)
-   /// Initialize as a vector by specifying all entries (no version for non-avx)
+   /// Initialize as a vector by specifying all entries (no version for scalar)
    SimdVec(double x1, double x2, double x3, double x4) {
       val = _mm256_set_pd(x4, x3, x2, x1); // Reversed order expected
    }
@@ -217,7 +223,7 @@ public:
             _mm256_sqrt_pd(a.val)
          );
 #else
-      return b*c + a;
+      return sqrt(a);
 #endif
    }
 
