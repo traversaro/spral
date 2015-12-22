@@ -17,11 +17,17 @@ public:
       : idx(idx), tree_(tree)
       {}
 
-      int get_nrow(void) {
+      /** Returns number of rows in node */
+      int get_nrow(void) const {
          return tree_.rptr_[idx+1] - tree_.rptr_[idx];
       }
-      int get_ncol(void) {
+      /** Returns number of columns in node */
+      int get_ncol(void) const {
          return tree_.sptr_[idx+1] - tree_.sptr_[idx];
+      }
+      /** Return prerequisite node in leaf-first order */
+      int get_leaf_prereq(void) const {
+         return tree_.leaf_prereq_[idx];
       }
 
       /* Publically visible members */
@@ -96,7 +102,8 @@ private:
    int *rlist_;
 
    /* Iteration data */
-   std::vector<int> leaf_first_order_;
+   std::vector<int> leaf_first_order_; // Ordering that goes from leaves up
+   std::vector<int> leaf_prereq_; // Latest child idx in leaf_first_order
 
    /* Stats */
    long nfact_;

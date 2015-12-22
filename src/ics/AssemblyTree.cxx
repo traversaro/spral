@@ -53,8 +53,14 @@ AssemblyTree::AssemblyTree (int n, int const ptr[], int const row[],
     * NB following call allocates sptr, sparent, rptr, rlist using malloc() */
    int flag = spral_core_analyse_basic_analyse(n, ptr_full, row_full, perm,
       &nnodes_, &sptr_, &sparent_, &rptr_, &rlist_, nemin, &nfact_, &nflop_, 0);
-   if(flag)
+   switch(flag) {
+   case 0: break; // Normal return
+   case 1: // Analyse detected matrix is structurally singular [only some cases]
+      printf("Warning: matrix is structurally singular\n");
+      break;
+   default:
       throw std::runtime_error("spral_core_analyse_basic_analyse() failed");
+   }
 
    /* We're now done with our full matrix copy - release memory */
    delete[] ptr_full;
@@ -84,6 +90,19 @@ void AssemblyTree::build_leaf_first_order() {
          if(level[i]==current_level) leaf_first_order_.push_back(i);
       }
       current_level++;
+   }
+
+   /* Construct inverse temporarily for lookup purposes */
+   std::vector<int> inverse_lookup(nnodes_);
+   for(int i=0; i<nnodes_; i++) inverse_lookup[ leaf_first_order_[i] ] = i;
+
+   /* Build prerequisite list: posn of latest child node in leaf_first_order_ */
+   leaf_prereq_.clear();
+   leaf_prereq_.resize(nnodes_, -1); // Init to no dependency for all nodes
+   for(int i=0; i<nnodes_; i++) {
+      if(sparent_[i] >= nnodes_) continue; // This is a root, no parent
+      int parent = inverse_lookup[ sparent_[i] ];
+      leaf_prereq_[ parent ] = i;
    }
 }
 
