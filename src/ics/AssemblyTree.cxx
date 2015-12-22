@@ -40,9 +40,16 @@ void lwr_to_full(int n, int const ptr[], int const row[],
 namespace spral {
 namespace ics {
 
+void AssemblyTree::Node::construct_row_map (int *map) const {
+   for(long ridx = tree_.rptr_[idx]; ridx < tree_.rptr_[idx+1]; ++ridx) {
+      int row = tree_.rlist_[ridx];
+      map[row] = ridx - tree_.rptr_[idx];
+   }
+}
+
 AssemblyTree::AssemblyTree (int n, int const ptr[], int const row[],
       int perm[], int nemin)
-      : nnodes_(0), sptr_(nullptr), sparent_(nullptr), rptr_(nullptr),
+      : n_(n), nnodes_(0), sptr_(nullptr), sparent_(nullptr), rptr_(nullptr),
         rlist_(nullptr), nfact_(0), nflop_(0) {
    /* Construct full matrix from lwr triangle */
    int *ptr_full = new int[n+3];

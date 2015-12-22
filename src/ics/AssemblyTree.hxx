@@ -17,6 +17,9 @@ public:
       : idx(idx), tree_(tree)
       {}
 
+      /***********************
+       * Node specific getters
+       ***********************/
       /** Returns number of rows in node */
       int get_nrow(void) const {
          return tree_.rptr_[idx+1] - tree_.rptr_[idx];
@@ -25,13 +28,38 @@ public:
       int get_ncol(void) const {
          return tree_.sptr_[idx+1] - tree_.sptr_[idx];
       }
-      /** Return prerequisite node in leaf-first order */
+      /** Returns prerequisite node in leaf-first order */
       int get_leaf_prereq(void) const {
          return tree_.leaf_prereq_[idx];
       }
+      /** Return parent node */
+      Node getParentNode(void) const {
+         return Node(tree_, tree_.sparent_[idx]);
+      }
 
-      /* Publically visible members */
-      int const idx;
+      /***********************
+       * Tree-wide getters
+       ***********************/
+      /** Returns largest row index that can occur in tree */
+      int get_max_tree_row_index(void) const {
+         return tree_.n_;
+      }
+
+      /***********************
+       * General routines
+       ***********************/
+      /** Returns true if node contains given column, or false otherwise. */
+      bool contains_column(int col) const {
+         return (col >= tree_.sptr_[idx] && col < tree_.sptr_[idx+1]);
+      }
+      /** Constructs a lookup array from relevant entries of rlist[].
+       *  Does not zero any non-present entries! */
+      void construct_row_map(int *map) const;
+
+      /***********************
+       * Public members
+       ***********************/
+      int const idx; //< Index within tree (elimination post-order)
 
    private:
       /* Private members */
@@ -95,6 +123,7 @@ private:
    void build_leaf_first_order();
 
    /* Core tree data */
+   int const n_;
    int nnodes_;
    int *sptr_;
    int *sparent_;
