@@ -2,6 +2,8 @@
 
 #include <cstdlib>
 
+#include "AssemblyTree.hxx"
+
 namespace spral {
 namespace ics {
 
@@ -28,6 +30,7 @@ protected:
    int nnodes_;
    int *perm_;
    long factor_mem_size_;
+   AssemblyTree tree_;
 
 };
 

@@ -10,9 +10,10 @@ namespace spral {
 namespace ics {
 
 /* Constructs symbolic factorization from matrix data */
-SymbolicFactor::SymbolicFactor (int n, int ptr[], int row[], int nemin) :
-      nemin(nemin), nfact(0), nflop(0), n_(n), nnodes_(0), perm_(nullptr),
-      factor_mem_size_(0) {
+SymbolicFactor::SymbolicFactor (int n, int ptr[], int row[], int nemin)
+: nemin(nemin), nfact(0), nflop(0), n_(n), nnodes_(0), perm_(nullptr),
+  factor_mem_size_(0), tree_(n)
+{
 
    /* Perform METIS ordering */
    perm_ = new int[n];
@@ -23,7 +24,7 @@ SymbolicFactor::SymbolicFactor (int n, int ptr[], int row[], int nemin) :
       throw std::runtime_error("spral_metis_order() failed");
 
    /* Construct AssemblyTree */
-   AssemblyTree tree(n, ptr, row, perm_, nemin);
+   tree_.construct_tree(ptr, row, perm_, nemin);
 
    /* Construct chunk buckets */
    const int MAXROW=50;
@@ -32,7 +33,7 @@ SymbolicFactor::SymbolicFactor (int n, int ptr[], int row[], int nemin) :
    for(int i=0; i<MAXROW+1; i++)
    for(int j=0; j<MAXCOL+1; j++)
       clen[i][j] = 0;
-   for(auto nitr=tree.leaf_first_begin(); nitr!=tree.leaf_first_end(); ++nitr) {
+   for(auto nitr=tree_.leaf_first_begin(); nitr!=tree_.leaf_first_end(); ++nitr) {
 
       const AssemblyTree::Node node = *nitr;
       int i = (node.get_nrow()-1)/4;

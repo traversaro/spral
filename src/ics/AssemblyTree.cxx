@@ -47,18 +47,17 @@ void AssemblyTree::Node::construct_row_map (int *map) const {
    }
 }
 
-AssemblyTree::AssemblyTree (int n, int const ptr[], int const row[],
-      int perm[], int nemin)
-      : n_(n), nnodes_(0), sptr_(nullptr), sparent_(nullptr), rptr_(nullptr),
-        rlist_(nullptr), nfact_(0), nflop_(0) {
+void AssemblyTree::construct_tree (int const ptr[], int const row[],
+      int perm[], int nemin) {
+
    /* Construct full matrix from lwr triangle */
-   int *ptr_full = new int[n+3];
-   int *row_full = new int[2*ptr[n]];
-   lwr_to_full(n, ptr, row, ptr_full, row_full);
+   int *ptr_full = new int[n_+3];
+   int *row_full = new int[2*ptr[n_]];
+   lwr_to_full(n_, ptr, row, ptr_full, row_full);
 
    /* Call analysis routine to construct tree
     * NB following call allocates sptr, sparent, rptr, rlist using malloc() */
-   int flag = spral_core_analyse_basic_analyse(n, ptr_full, row_full, perm,
+   int flag = spral_core_analyse_basic_analyse(n_, ptr_full, row_full, perm,
       &nnodes_, &sptr_, &sparent_, &rptr_, &rlist_, nemin, &nfact_, &nflop_, 0);
    switch(flag) {
    case 0: break; // Normal return

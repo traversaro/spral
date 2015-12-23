@@ -97,15 +97,27 @@ public:
       std::vector<int>::iterator it_;
    };
 
+   AssemblyTree(int n)
+   : n_(n), nnodes_(0), sptr_(nullptr), sparent_(nullptr), rptr_(nullptr),
+     rlist_(nullptr), nfact_(0), nflop_(0)
+   {}
    /** Construct assembly tree. IMPORTANT: Changes perm */
    AssemblyTree(int n, int const ptr[], int const row[], int perm[],
-         int nemin);
+         int nemin)
+   : n_(n), nnodes_(0), sptr_(nullptr), sparent_(nullptr), rptr_(nullptr),
+     rlist_(nullptr), nfact_(0), nflop_(0)
+   {
+      construct_tree(ptr, row, perm, nemin);
+   }
    ~AssemblyTree () {
       if(sptr_) free(sptr_); // Allocated by malloc in C interface fn
       if(sparent_) free(sparent_); // Allocated by malloc in C interface fn
       if(rptr_) free(rptr_); // Allocated by malloc in C interface fn
       if(rlist_) free(rlist_); // Allocated by malloc in C interface fn
    }
+
+   /** Initializer. IMPORTANT: Changes perm */
+   void construct_tree(int const ptr[], int const row[], int perm[], int nemin);
 
    long getNfact() { return nfact_; }
    long getNflop() { return nflop_; }
