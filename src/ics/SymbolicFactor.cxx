@@ -12,7 +12,7 @@ namespace ics {
 /* Constructs symbolic factorization from matrix data */
 SymbolicFactor::SymbolicFactor (int n, int ptr[], int row[], int nemin)
 : nemin(nemin), nfact(0), nflop(0), n_(n), nnodes_(0), perm_(nullptr),
-  factor_mem_size_(0), tree_(n)
+  factor_mem_size_(0), max_workspace_size_(0), tree_(n)
 {
 
    /* Perform METIS ordering */
@@ -27,14 +27,17 @@ SymbolicFactor::SymbolicFactor (int n, int ptr[], int row[], int nemin)
    tree_.construct_tree(ptr, row, perm_, nemin);
 
    /* Construct list of nodes */
-   long loffset = 0;
+   factor_mem_size_ = 0;
+   int max_contrib_size = 0;
    for(auto nitr=tree_.leaf_first_begin(); nitr!=tree_.leaf_first_end(); ++nitr) {
       const AssemblyTree::Node node = *nitr;
       int m = node.get_nrow();
       int n = node.get_ncol();
-      nodes_.push_back(Node<double>(*nitr, loffset, m));
-      loffset += m*((long) n);
+      nodes_.push_back(Node<double>(*nitr, factor_mem_size_, m));
+      factor_mem_size_ += m*((long) n);
+      max_contrib_size = std::max(max_contrib_size, m-n);
    }
+   max_workspace_size_ = max_contrib_size*max_contrib_size + n_;
 
    /* Construct chunk buckets */
    const int MAXROW=50;

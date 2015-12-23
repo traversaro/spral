@@ -18,6 +18,10 @@ public:
      ldl_(ldl)
    {}
 
+   int get_parent_node_idx() const {
+      return node_.get_parent_node().idx;
+   }
+
    template <typename anc_it_type>
    void factor(T const* aval, T* lval, anc_it_type anc_begin,
          anc_it_type anc_end, WorkspaceManager &memhandler) const {
@@ -35,7 +39,7 @@ public:
       }
 
       /* Factorize diagonal block */
-      int info = potrf<T>('L', n_, ldiag, ldl_, info);
+      int info = potrf<T>('L', n_, ldiag, ldl_);
       if(info) throw NotPositiveDefiniteException(info);
 
       /* Apply to block below diagonal */
@@ -45,8 +49,6 @@ public:
       syrk<T>('L', 'N', m_-n_, n_, -1.0, lrect, ldl_, 0.0, contrib, ldcontrib);
 
       /* Distribute elements of generated element to ancestors */
-      bool reset_map = true;
-      const AssemblyTree::Node target_node = node_.getParentNode();
       auto row_start = std::next(node_.row_begin(), n_);
       const T* contrib_ptr = contrib;
       for(auto anc_itr = anc_begin; anc_itr != anc_end; ++anc_itr) {
@@ -68,7 +70,7 @@ public:
     *  \returns Number of columns found relevant. */
    template <typename it_type>
    int add_contribution(T *lval, it_type row_start, it_type row_end,
-         T const* contrib, int ldcontrib, int* map) {
+         T const* contrib, int ldcontrib, int* map) const {
       T *lptr = &lval[loffset_];
       node_.construct_row_map(map);
       for(auto src_col=row_start; src_col!=row_end; ++src_col) {
@@ -77,12 +79,14 @@ public:
             return cidx; // Done: return #cols used
          int col = map[ *src_col ]; // NB: Equal to *src_col - sptr[node]
          T const* src = &contrib[cidx*(ldcontrib+1)]; // Start on diagonal
-         T const* dest = &lptr[col * ldl_];
+         T *dest = &lptr[col * ldl_];
          for(auto src_row=src_col; src_row!=row_end; ++src_row) {
             int row = map[ *src_row ];
             dest[row] += *(src++);
          }
       }
+      // If we reach this point, we have used all columns
+      return std::distance(row_start, row_end);
    }
 
 private:

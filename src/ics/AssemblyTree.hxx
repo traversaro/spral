@@ -44,7 +44,7 @@ public:
          return tree_.leaf_prereq_[idx];
       }
       /** Return parent node */
-      Node getParentNode(void) const {
+      Node get_parent_node(void) const {
          return Node(tree_, tree_.sparent_[idx]);
       }
       /** Return iterator to start of a_to_l list for node */

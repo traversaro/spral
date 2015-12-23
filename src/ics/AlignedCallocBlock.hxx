@@ -20,7 +20,7 @@ public:
    ~AlignedCallocBlock() {
       free(base_);
    }
-   T *getPtr() const {
+   T *get_ptr() const {
       return ptr_;
    }
 private:
