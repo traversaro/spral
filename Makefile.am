@@ -44,10 +44,20 @@ endif
 
 # ICS
 libspral_a_SOURCES += \
+	src/ics/AlignedCallocBlock.hxx \
+	src/ics/AssemblyTree.cxx \
+	src/ics/AssemblyTree.hxx \
+	src/ics/blas_templates.hxx \
+	src/ics/blas_templates.cxx \
+	src/ics/Chunk.hxx \
+	src/ics/ICSExceptions.hxx \
+	src/ics/Node.hxx \
 	src/ics/NumericFactor.cxx \
 	src/ics/NumericFactor.hxx \
+	src/ics/SimdVec.hxx \
 	src/ics/SymbolicFactor.cxx \
-	src/ics/SymbolicFactor.hxx
+	src/ics/SymbolicFactor.hxx \
+	src/ics/WorkspaceManager.hxx
 bin_PROGRAMS = spral_ics
 spral_ics_SOURCES = driver/spral_ics.cxx
 
