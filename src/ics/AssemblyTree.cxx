@@ -6,11 +6,13 @@
 
 namespace { /*anonymous namespace for internal fns */
 
-/* Convert a lower triangle only matrix to full format.
- * On entry ptr_out[] must have dimension n+3, and row_out[] must be of
+/* Convert a lower triangle only matrix to full format. Produce map to trace
+ * back where indices came from.
+ *
+ * On entry ptr_out[] must have dimension n+3, and row_out[], map[] must be of
  * sufficient size to hold the matrix (easiest: make it twice size of row[]) */
 void lwr_to_full(int n, int const ptr[], int const row[],
-      int ptr_out[], int row_out[]) {
+      int ptr_out[], int row_out[], int map[]) {
    /* Count entries in each column at offset of +2 */
    for(int i=0; i<n+3; i++) ptr_out[i] = 0;
    for(int i=0; i<n; i++) {
@@ -27,9 +29,13 @@ void lwr_to_full(int n, int const ptr[], int const row[],
    for(int i=0; i<n; i++) {
       for(int j=ptr[i]; j<ptr[i+1]; j++) {
          int k = row[j];
-         row_out[ptr_out[i+1]] = k; ptr_out[i+1]++;
+         row_out[ptr_out[i+1]] = k;
+         map[ptr_out[i+1]] = j;
+         ptr_out[i+1]++;
          if (i!=k) {
-            row_out[ptr_out[k+1]] = i; ptr_out[k+1]++;
+            row_out[ptr_out[k+1]] = i;
+            map[ptr_out[k+1]] = j;
+            ptr_out[k+1]++;
          }
       }
    }
@@ -53,7 +59,8 @@ void AssemblyTree::construct_tree (int const ptr[], int const row[],
    /* Construct full matrix from lwr triangle */
    int *ptr_full = new int[n_+3];
    int *row_full = new int[2*ptr[n_]];
-   lwr_to_full(n_, ptr, row, ptr_full, row_full);
+   int *a_half_map = new int[2*ptr[n_]];
+   lwr_to_full(n_, ptr, row, ptr_full, row_full, a_half_map);
 
    /* Call analysis routine to construct tree
     * NB following call allocates sptr, sparent, rptr, rlist using malloc() */
@@ -68,7 +75,37 @@ void AssemblyTree::construct_tree (int const ptr[], int const row[],
       throw std::runtime_error("spral_core_analyse_basic_analyse() failed");
    }
 
-   /* We're now done with our full matrix copy - release memory */
+   /* Construct inverse permutation */
+   int *inverse_perm = new int[n_];
+   for(int i=0; i<n_; ++i)
+      inverse_perm[ perm[i] ] = i;
+
+   /* Construct lists (idx in aval -> idx in destination node) */
+   int *map = new int[n_];
+   a_to_l_ptr_.clear(); a_to_l_ptr_.reserve(nnodes_+1);
+   a_to_l_map_.clear(); a_to_l_map_.reserve(ptr[n_]);
+   for(int node=0; node<nnodes_; ++node) {
+      a_to_l_ptr_.push_back( a_to_l_map_.size() );
+      Node(*this, node).construct_row_map(map);
+      for(int col=sptr_[node]; col<sptr_[node+1]; ++col) {
+         int src_col = inverse_perm[col];
+         for(int i=ptr[src_col]; i<ptr[src_col+1]; ++i) {
+            int r = perm[ row[i] ];
+            if(r < col) continue; // In upper triangle of L: ignore
+            a_to_l_map_.push_back(ALMap(
+                  a_half_map[i], // Source in A
+                  map[r],        // Destination row of node in L
+                  col            // Destination col of node in L
+                  ));
+         }
+      }
+   }
+   a_to_l_ptr_.push_back( a_to_l_map_.size() );
+   delete[] map;
+
+   /* Done with full matrix and inverse perm: release memory */
+   delete[] inverse_perm;
+   delete[] a_half_map;
    delete[] ptr_full;
    delete[] row_full;
    

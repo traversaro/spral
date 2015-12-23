@@ -3,6 +3,7 @@
 #include <cstdlib>
 
 #include "AssemblyTree.hxx"
+#include "Node.hxx"
 
 namespace spral {
 namespace ics {
@@ -31,6 +32,7 @@ protected:
    int *perm_;
    long factor_mem_size_;
    AssemblyTree tree_;
+   std::vector< Node<double> > nodes_;
 
 };
 

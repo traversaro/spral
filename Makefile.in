@@ -217,8 +217,13 @@ libspral_a_LIBADD =
 am__libspral_a_SOURCES_DIST = src/blas_iface.f90 src/core_analyse.f90 \
 	interfaces/C/core_analyse.f90 src/cuda/api_wrappers.cu \
 	src/cuda/cuda.f90 src/cuda/cuda_check.h \
+	src/ics/AlignedCallocBlock.hxx src/ics/AssemblyTree.cxx \
+	src/ics/AssemblyTree.hxx src/ics/blas_templates.hxx \
+	src/ics/blas_templates.cxx src/ics/Chunk.hxx \
+	src/ics/ICSExceptions.hxx src/ics/Node.hxx \
 	src/ics/NumericFactor.cxx src/ics/NumericFactor.hxx \
-	src/ics/SymbolicFactor.cxx src/ics/SymbolicFactor.hxx \
+	src/ics/SimdVec.hxx src/ics/SymbolicFactor.cxx \
+	src/ics/SymbolicFactor.hxx src/ics/WorkspaceManager.hxx \
 	src/lapack_iface.f90 src/match_order.f90 src/matrix_util.f90 \
 	interfaces/C/matrix_util.f90 \
 	src/metis$(METIS_VERSION)_wrapper.f90 \
@@ -261,7 +266,9 @@ am__dirstamp = $(am__leading_dot)dirstamp
 @HAVE_NVCC_TRUE@	interfaces/C/ssids.$(OBJEXT)
 am_libspral_a_OBJECTS = src/blas_iface.$(OBJEXT) \
 	src/core_analyse.$(OBJEXT) interfaces/C/core_analyse.$(OBJEXT) \
-	$(am__objects_1) src/ics/NumericFactor.$(OBJEXT) \
+	$(am__objects_1) src/ics/AssemblyTree.$(OBJEXT) \
+	src/ics/blas_templates.$(OBJEXT) \
+	src/ics/NumericFactor.$(OBJEXT) \
 	src/ics/SymbolicFactor.$(OBJEXT) src/lapack_iface.$(OBJEXT) \
 	src/match_order.$(OBJEXT) src/matrix_util.$(OBJEXT) \
 	interfaces/C/matrix_util.$(OBJEXT) \
@@ -1064,8 +1071,13 @@ include_HEADERS = include/spral.h include/spral_matrix_util.h \
 # TIMER
 libspral_a_SOURCES = src/blas_iface.f90 src/core_analyse.f90 \
 	interfaces/C/core_analyse.f90 $(am__append_1) \
+	src/ics/AlignedCallocBlock.hxx src/ics/AssemblyTree.cxx \
+	src/ics/AssemblyTree.hxx src/ics/blas_templates.hxx \
+	src/ics/blas_templates.cxx src/ics/Chunk.hxx \
+	src/ics/ICSExceptions.hxx src/ics/Node.hxx \
 	src/ics/NumericFactor.cxx src/ics/NumericFactor.hxx \
-	src/ics/SymbolicFactor.cxx src/ics/SymbolicFactor.hxx \
+	src/ics/SimdVec.hxx src/ics/SymbolicFactor.cxx \
+	src/ics/SymbolicFactor.hxx src/ics/WorkspaceManager.hxx \
 	src/lapack_iface.f90 src/match_order.f90 src/matrix_util.f90 \
 	interfaces/C/matrix_util.f90 \
 	src/metis$(METIS_VERSION)_wrapper.f90 \
@@ -1259,6 +1271,10 @@ src/ics/$(am__dirstamp):
 src/ics/$(DEPDIR)/$(am__dirstamp):
 	@$(MKDIR_P) src/ics/$(DEPDIR)
 	@: > src/ics/$(DEPDIR)/$(am__dirstamp)
+src/ics/AssemblyTree.$(OBJEXT): src/ics/$(am__dirstamp) \
+	src/ics/$(DEPDIR)/$(am__dirstamp)
+src/ics/blas_templates.$(OBJEXT): src/ics/$(am__dirstamp) \
+	src/ics/$(DEPDIR)/$(am__dirstamp)
 src/ics/NumericFactor.$(OBJEXT): src/ics/$(am__dirstamp) \
 	src/ics/$(DEPDIR)/$(am__dirstamp)
 src/ics/SymbolicFactor.$(OBJEXT): src/ics/$(am__dirstamp) \
@@ -1738,8 +1754,10 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@examples/C/ssmfe/$(DEPDIR)/precond_expert.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@examples/C/ssmfe/$(DEPDIR)/precond_ssmfe.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@examples/C/ssmfe/$(DEPDIR)/shift_invert.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/ics/$(DEPDIR)/AssemblyTree.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/ics/$(DEPDIR)/NumericFactor.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/ics/$(DEPDIR)/SymbolicFactor.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/ics/$(DEPDIR)/blas_templates.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@tests/ssmfe/$(DEPDIR)/ssmfe_ciface.Po@am__quote@
 
 .c.o:

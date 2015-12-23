@@ -9,6 +9,17 @@ namespace ics {
 
 class AssemblyTree {
 public:
+   /** Maps a single entry from A to within a node of L */
+   struct ALMap {
+      int src;
+      int dest_row;
+      int dest_col;
+
+      ALMap(int src, int dest_row, int dest_col)
+      : src(src), dest_row(dest_row), dest_col(dest_col)
+      {}
+   };
+
    /** Represents a single node of the assembly tree */
    class Node {
    public:
@@ -35,6 +46,28 @@ public:
       /** Return parent node */
       Node getParentNode(void) const {
          return Node(tree_, tree_.sparent_[idx]);
+      }
+      /** Return iterator to start of a_to_l list for node */
+      std::vector<struct ALMap>::const_iterator a_to_l_begin(void) const {
+         return std::next(
+               tree_.a_to_l_map_.cbegin(),
+               tree_.a_to_l_ptr_[idx]
+               );
+      }
+      /** Return iterator to end of a_to_l list for node */
+      std::vector<struct ALMap>::const_iterator a_to_l_end(void) const {
+         return std::next(
+               tree_.a_to_l_map_.cbegin(),
+               tree_.a_to_l_ptr_[idx+1]
+               );
+      }
+      /** Return iterator to start of row list for node */
+      int const* row_begin(void) const {
+         return &tree_.rlist_[tree_.rptr_[idx]];
+      }
+      /** Return iterator to end of row list for node */
+      int const* row_end(void) const {
+         return &tree_.rlist_[tree_.rptr_[idx+1]];
       }
 
       /***********************
@@ -99,13 +132,13 @@ public:
 
    AssemblyTree(int n)
    : n_(n), nnodes_(0), sptr_(nullptr), sparent_(nullptr), rptr_(nullptr),
-     rlist_(nullptr), nfact_(0), nflop_(0)
+     rlist_(nullptr), a_to_l_map_(), nfact_(0), nflop_(0)
    {}
    /** Construct assembly tree. IMPORTANT: Changes perm */
    AssemblyTree(int n, int const ptr[], int const row[], int perm[],
          int nemin)
    : n_(n), nnodes_(0), sptr_(nullptr), sparent_(nullptr), rptr_(nullptr),
-     rlist_(nullptr), nfact_(0), nflop_(0)
+     rlist_(nullptr), a_to_l_map_(), nfact_(0), nflop_(0)
    {
       construct_tree(ptr, row, perm, nemin);
    }
@@ -142,7 +175,11 @@ private:
    long *rptr_;
    int *rlist_;
 
-   /* Iteration data */
+   /* Data wrt matrix A */
+   std::vector<int> a_to_l_ptr_;
+   std::vector<struct ALMap> a_to_l_map_;
+
+   /* Iteration order data */
    std::vector<int> leaf_first_order_; // Ordering that goes from leaves up
    std::vector<int> leaf_prereq_; // Latest child idx in leaf_first_order
 

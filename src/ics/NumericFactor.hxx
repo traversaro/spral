@@ -10,7 +10,7 @@ class NumericFactor {
    typedef double T;
 public:
    /** Perform a factorization as part of construction */
-   NumericFactor(const SymbolicFactor &sf, const T aval[]);
+   NumericFactor(SymbolicFactor const& sf, T const aval[]);
 
    /** Perform a solve with factors */
    void solve(int nrhs, T x[]);

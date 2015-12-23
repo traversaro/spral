@@ -5,7 +5,7 @@
 extern "C" {
 #endif
 
-int spral_core_analyse_basic_analyse(int n, const int ptr[], const int row[],
+int spral_core_analyse_basic_analyse(int n, int const ptr[], int const row[],
       int perm[], int *nnodes, int **sptr, int **sparent, long **rptr,
       int **rlist, int nemin, long *nfact, long *nflops, int base);
 

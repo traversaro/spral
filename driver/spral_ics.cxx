@@ -29,7 +29,7 @@ int main(void) {
    printf("\nAnalyse...");
    struct timespec t1, t2;
    clock_gettime(CLOCK_REALTIME, &t1);
-   spral::ics::SymbolicFactor sfact(n, ptr, row, 1);
+   spral::ics::SymbolicFactor sfact(n, ptr, row, 8);
    clock_gettime(CLOCK_REALTIME, &t2);
    printf("ok\n");
    printf("Analyse took %e\n", tdiff(t1, t2));
@@ -39,7 +39,7 @@ int main(void) {
    /* Factorize */
    printf("\nFactorize...");
    clock_gettime(CLOCK_REALTIME, &t1);
-   spral::ics::NumericFactor nfact(sfact, n, ptr, row, val);
+   spral::ics::NumericFactor nfact(sfact, val);
    clock_gettime(CLOCK_REALTIME, &t2);
    printf("ok\n");
    printf("Factorize took %e\n", tdiff(t1, t2));

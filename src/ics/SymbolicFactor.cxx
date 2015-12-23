@@ -26,6 +26,16 @@ SymbolicFactor::SymbolicFactor (int n, int ptr[], int row[], int nemin)
    /* Construct AssemblyTree */
    tree_.construct_tree(ptr, row, perm_, nemin);
 
+   /* Construct list of nodes */
+   long loffset = 0;
+   for(auto nitr=tree_.leaf_first_begin(); nitr!=tree_.leaf_first_end(); ++nitr) {
+      const AssemblyTree::Node node = *nitr;
+      int m = node.get_nrow();
+      int n = node.get_ncol();
+      nodes_.push_back(Node<double>(*nitr, loffset, m));
+      loffset += m*((long) n);
+   }
+
    /* Construct chunk buckets */
    const int MAXROW=50;
    const int MAXCOL=8;

@@ -17,7 +17,7 @@ public:
 
 private:
    int diagonal_index_;
-}
+};
 
 } /* namespace ics */
 } /* namespace spral */
