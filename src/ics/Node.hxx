@@ -100,7 +100,9 @@ public:
          anc_it_type anc_begin, anc_it_type anc_end,
          WorkspaceManager &memhandler) const {
       /* Perform solve with diagonal block */
-      trsm<T>('L', 'L', 'N', 'N', n_, nrhs, 1.0, &lval[loffset_], ldl_, x, ldx);
+      T* xdiag = &x[*node_.row_begin()];
+      trsm<T>('L', 'L', 'N', 'N', n_, nrhs, 1.0, &lval[loffset_], ldl_, xdiag,
+            ldx);
 
       /* Calculate contributions to ancestors */
    }
@@ -112,7 +114,9 @@ public:
       /* Gather contributions from ancestors */
 
       /* Perform solve with diagonal block */
-      trsm<T>('L', 'L', 'T', 'N', n_, nrhs, 1.0, &lval[loffset_], ldl_, x, ldx);
+      T* xdiag = &x[*node_.row_begin()];
+      trsm<T>('L', 'L', 'T', 'N', n_, nrhs, 1.0, &lval[loffset_], ldl_, xdiag,
+            ldx);
    }
 private:
    AssemblyTree::Node const& node_;
