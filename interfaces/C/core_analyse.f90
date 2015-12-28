@@ -26,7 +26,7 @@ integer(C_INT) function spral_core_analyse_basic_analyse(n, ptr, row, perm, &
    integer(C_INT), dimension(:), pointer :: psptr, psparent, prlist
    integer(C_LONG), dimension(:), pointer :: prptr
 
-   integer(C_INT) :: dummy_int, i
+   integer(C_INT) :: dummy_int
    integer(C_LONG) :: dummy_long
 
    interface
