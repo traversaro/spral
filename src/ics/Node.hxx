@@ -95,6 +95,25 @@ public:
       return std::distance(row_start, row_end);
    }
 
+   template <typename anc_it_type>
+   void forward_solve(int nrhs, T* x, int ldx, T const* lval,
+         anc_it_type anc_begin, anc_it_type anc_end,
+         WorkspaceManager &memhandler) const {
+      /* Perform solve with diagonal block */
+      trsm<T>('L', 'L', 'N', 'N', n_, nrhs, 1.0, &lval[loffset_], ldl_, x, ldx);
+
+      /* Calculate contributions to ancestors */
+   }
+
+   template <typename anc_it_type>
+   void backward_solve(int nrhs, T* x, int ldx, T const* lval,
+         anc_it_type anc_begin, anc_it_type anc_end,
+         WorkspaceManager &memhandler) const {
+      /* Gather contributions from ancestors */
+
+      /* Perform solve with diagonal block */
+      trsm<T>('L', 'L', 'T', 'N', n_, nrhs, 1.0, &lval[loffset_], ldl_, x, ldx);
+   }
 private:
    AssemblyTree::Node const& node_;
    int const m_;

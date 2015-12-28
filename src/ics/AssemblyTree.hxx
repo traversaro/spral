@@ -124,14 +124,14 @@ public:
    /** Initializer. IMPORTANT: Changes perm */
    void construct_tree(int const ptr[], int const row[], int perm[], int nemin);
 
-   long get_nfact() { return nfact_; }
-   long get_nflop() { return nflop_; }
+   long get_nfact() const { return nfact_; }
+   long get_nflop() const { return nflop_; }
 
    /* Iterators for leaf first ordering */
-   std::vector<Node>::const_iterator leaf_first_begin() {
+   std::vector<Node>::const_iterator leaf_first_begin() const {
       return leaf_first_order_.cbegin();
    }
-   std::vector<Node>::const_iterator leaf_first_end() {
+   std::vector<Node>::const_iterator leaf_first_end() const {
       return leaf_first_order_.cend();
    }
 

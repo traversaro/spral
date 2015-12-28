@@ -73,6 +73,14 @@ public:
    std::vector< Node<T> >::const_iterator node_end(void) const {
       return nodes_.cend();
    }
+   /** Returns iterator to reverse beginning of node list (in assembly tree order) */
+   std::vector< Node<T> >::const_reverse_iterator node_rbegin(void) const {
+      return nodes_.crbegin();
+   }
+   /** Returns iterator to reverse end of node list (in assembly tree order) */
+   std::vector< Node<T> >::const_reverse_iterator node_rend(void) const {
+      return nodes_.crend();
+   }
 
    /** Returns iterator to node's ancestors (starts at parent) */
    ancestor_iterator get_ancestor_iterator(Node<T> const& node) const {
@@ -84,11 +92,12 @@ public:
 
    /* Information */
    const int nemin;
+   long get_nfact() const { return tree_.get_nfact(); }
+   long get_nflop() const { return tree_.get_nflop(); }
+   int get_n() const { return n_; }
+   int const* get_perm() const { return perm_; }
 
-   long get_nfact() { return tree_.get_nfact(); }
-   long get_nflop() { return tree_.get_nflop(); }
-
-protected:
+private:
    /* Core data */
    int n_;
    int nnodes_;

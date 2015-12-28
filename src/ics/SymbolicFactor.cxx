@@ -38,9 +38,9 @@ SymbolicFactor::SymbolicFactor (int n, int ptr[], int row[], int nemin)
    }
    max_workspace_size_ = max_contrib_size*max_contrib_size + n_;
 
-   printf("perm_ =");
+   /*printf("perm_ =");
    for(int i=0; i<n_; i++) printf(" %d", perm_[i]);
-   printf("\n");
+   printf("\n");*/
 
 #if 0
    /* Construct chunk buckets */
