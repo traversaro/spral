@@ -10,22 +10,29 @@ float tdiff(const struct timespec &t1, const struct timespec &t2) {
    return t2.tv_sec - t1.tv_sec + 1e-9*(t2.tv_nsec - t1.tv_nsec);
 }
 
-void process_options(int argc, char *const * argv, bool& print_matrix) {
+void process_options(int argc, char *const * argv, bool& print_matrix, int& nemin) {
    boost::program_options::options_description desc("Allowed options");
    desc.add_options()
       ("help", "produce help message")
       ("print-matrix", "print input matrix")
+      ("nemin", boost::program_options::value<int>(&nemin)->default_value(8),
+         "supernode amalgamation parameter")
       ;
    boost::program_options::variables_map vm;
    boost::program_options::store(boost::program_options::parse_command_line(argc, argv, desc), vm);
    boost::program_options::notify(vm);
 
+   /* Print help and exit if requested */
    if( vm.count("help") ) {
       std::cout << desc << std::endl;
       exit(1);
    }
 
+   /* Set values that require present/not-present */
    print_matrix = ( vm.count("print-matrix") );
+
+   /* Feedback non-obvious settings to user */
+   std::cout << "nemin = " << nemin << std::endl;
 }
 
 template <typename T>
@@ -87,7 +94,8 @@ T calc_bwd_error(int n, int const* ptr, int const* row, T const* val, T const* s
 int main(int argc, char *const * argv) {
    /* Process options */
    bool print_matrix;
-   process_options(argc, argv, print_matrix);
+   int nemin;
+   process_options(argc, argv, print_matrix, nemin);
 
    /* Read in a matrix */
    printf("Reading...");
@@ -121,7 +129,7 @@ int main(int argc, char *const * argv) {
    printf("\nAnalyse...");
    struct timespec t1, t2;
    clock_gettime(CLOCK_REALTIME, &t1);
-   spral::ics::SymbolicFactor sfact(n, ptr, row, 8);
+   spral::ics::SymbolicFactor sfact(n, ptr, row, nemin);
    clock_gettime(CLOCK_REALTIME, &t2);
    printf("ok\n");
    printf("Analyse took %e\n", tdiff(t1, t2));
