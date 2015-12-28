@@ -1,3 +1,5 @@
+#include <boost/program_options.hpp>
+#include <iostream>
 #include <time.h>
 
 #include "spral.h"
@@ -8,7 +10,13 @@ float tdiff(const struct timespec &t1, const struct timespec &t2) {
    return t2.tv_sec - t1.tv_sec + 1e-9*(t2.tv_nsec - t1.tv_nsec);
 }
 
-int main(void) {
+void process_options(int argc, char *const * argv, bool& print_matrix);
+
+int main(int argc, char *const * argv) {
+   /* Process options */
+   bool print_matrix;
+   process_options(argc, argv, print_matrix);
+
    /* Read in a matrix */
    printf("Reading...");
    struct spral_rb_options rb_options;
@@ -24,6 +32,18 @@ int main(void) {
       return 1;
    }
    printf("ok\n");
+
+   if(print_matrix) {
+      printf("Matrix:\n");
+      for(int i=0; i<n; i++) {
+         printf("%4d:", i);
+         for(int j=ptr[i]; j<ptr[i+1]; ++j) printf(" %10d", row[j]);
+         printf("\n");
+         printf("%4d:", i);
+         for(int j=ptr[i]; j<ptr[i+1]; ++j) printf(" %10.2e", val[j]);
+         printf("\n");
+      }
+   }
 
    /* Analyse */
    printf("\nAnalyse...");
@@ -50,4 +70,22 @@ int main(void) {
    spral_rb_free_handle(&read_handle);
 
    return 0; // Success
+}
+
+void process_options(int argc, char *const * argv, bool& print_matrix) {
+   boost::program_options::options_description desc("Allowed options");
+   desc.add_options()
+      ("help", "produce help message")
+      ("print-matrix", "print input matrix")
+      ;
+   boost::program_options::variables_map vm;
+   boost::program_options::store(boost::program_options::parse_command_line(argc, argv, desc), vm);
+   boost::program_options::notify(vm);
+
+   if( vm.count("help") ) {
+      std::cout << desc << std::endl;
+      exit(1);
+   }
+
+   print_matrix = ( vm.count("print-matrix") );
 }

@@ -28,6 +28,9 @@ SPRAL_METIS(,
    [AC_MSG_ERROR([No MeTiS library found.])]
    )
 
+AX_BOOST_BASE
+AX_BOOST_PROGRAM_OPTIONS
+
 # Output data
 AC_CONFIG_FILES(Makefile)
 AC_OUTPUT

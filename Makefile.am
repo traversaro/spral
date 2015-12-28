@@ -21,6 +21,9 @@ AM_CXXFLAGS = -I$(top_srcdir)/include -std=c++11
 LDADD = -L. -lspral $(METIS_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(FCLIBS) -lrt
 CUDA_LIBS = -lcublas
 
+# Add boost libraries
+LDADD += $(BOOST_PROGRAM_OPTIONS_LIB)
+
 lib_LIBRARIES = libspral.a
 include_HEADERS = include/spral.h
 
