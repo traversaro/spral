@@ -10,7 +10,79 @@ float tdiff(const struct timespec &t1, const struct timespec &t2) {
    return t2.tv_sec - t1.tv_sec + 1e-9*(t2.tv_nsec - t1.tv_nsec);
 }
 
-void process_options(int argc, char *const * argv, bool& print_matrix);
+void process_options(int argc, char *const * argv, bool& print_matrix) {
+   boost::program_options::options_description desc("Allowed options");
+   desc.add_options()
+      ("help", "produce help message")
+      ("print-matrix", "print input matrix")
+      ;
+   boost::program_options::variables_map vm;
+   boost::program_options::store(boost::program_options::parse_command_line(argc, argv, desc), vm);
+   boost::program_options::notify(vm);
+
+   if( vm.count("help") ) {
+      std::cout << desc << std::endl;
+      exit(1);
+   }
+
+   print_matrix = ( vm.count("print-matrix") );
+}
+
+template <typename T>
+void spmv(int n, int const* ptr, int const* row, T const* val, T const* x, T *y){
+   for(int i=0; i<n; ++i) y[i] = 0.0;
+   for(int i=0; i<n; ++i) {
+      for(int j=ptr[i]; j<ptr[i+1]; ++j) {
+         int k = row[j];
+         y[k] += val[j] * x[i];
+         if(i==k) continue;
+         y[i] += val[j] * x[k];
+      }
+   }
+}
+
+template <typename T>
+T matrix_inf_norm(int n, int const* ptr, int const* row, T const* val) {
+   /* NB: inf norm is maximum row sum of abs values */
+   T *row_sum = new T[n];
+   for(int i=0; i<n; ++i) row_sum[i] = 0.0;
+   for(int i=0; i<n; ++i) {
+      for(int j=ptr[i]; j<ptr[i+1]; ++j) {
+         int k = row[j];
+         row_sum[k] += fabs(val[j]);
+         if(i==k) continue;
+         row_sum[i] += fabs(val[j]);
+      }
+   }
+
+   T best = *std::max_element(row_sum, row_sum+n);
+   delete[] row_sum;
+
+   return best;
+}
+
+template <typename T>
+T max_abs_value(T const* first, T const* end) {
+   T bestv = 0.0;
+   for(auto v=first; v!=end; ++v)
+      bestv = std::max(bestv, fabs(*v));
+   return bestv;
+}
+
+template <typename T>
+T calc_bwd_error(int n, int const* ptr, int const* row, T const* val, T const* soln, T const* rhs) {
+   /* Calculate residual */
+   T *resid = new T[n];
+   spmv(n, ptr, row, val, soln, resid);
+   for(int i=0; i<n; i++) resid[i] -= rhs[i];
+   /* Calculate scaled norms */
+   T resid_inf = max_abs_value(resid, resid+n);
+   T A_inf = matrix_inf_norm(n, ptr, row, val);
+   T x_inf = max_abs_value(soln, soln+n);
+   T b_inf = max_abs_value(rhs, rhs+n);
+   delete[] resid;
+   return resid_inf / (A_inf*x_inf + b_inf);
+}
 
 int main(int argc, char *const * argv) {
    /* Process options */
@@ -64,28 +136,33 @@ int main(int argc, char *const * argv) {
    printf("ok\n");
    printf("Factorize took %e\n", tdiff(t1, t2));
 
+   /* Generate solution and rhs */
+   double *x = new double[n];
+   for(int i=0; i<n; i++) x[i] = 0.1*i;
+   double *rhs = new double[n];
+   spmv(n, ptr, row, val, x, rhs);
+
    /* Solve */
+   printf("\nSolve...");
+   double *soln = new double[n];
+   for(int i=0; i<n; i++) soln[i] = rhs[i];
+   clock_gettime(CLOCK_REALTIME, &t1);
+   nfact.solve(soln);
+   clock_gettime(CLOCK_REALTIME, &t2);
+   printf("ok\n");
+   printf("solve took %e\n", tdiff(t1, t2));
+
+   /* Errors */
+   double fwd_err = 0.0;
+   for(int i=0; i<n; i++) fwd_err = std::max(fwd_err, fabs(soln[i]-x[i]));
+   printf("fwd error = %e\n", fwd_err);
+   printf("bwd error = %e\n", calc_bwd_error(n, ptr, row, val, soln, rhs));
 
    /* Cleanup */
+   delete[] soln;
+   delete[] rhs;
+   delete[] x;
    spral_rb_free_handle(&read_handle);
 
    return 0; // Success
-}
-
-void process_options(int argc, char *const * argv, bool& print_matrix) {
-   boost::program_options::options_description desc("Allowed options");
-   desc.add_options()
-      ("help", "produce help message")
-      ("print-matrix", "print input matrix")
-      ;
-   boost::program_options::variables_map vm;
-   boost::program_options::store(boost::program_options::parse_command_line(argc, argv, desc), vm);
-   boost::program_options::notify(vm);
-
-   if( vm.count("help") ) {
-      std::cout << desc << std::endl;
-      exit(1);
-   }
-
-   print_matrix = ( vm.count("print-matrix") );
 }

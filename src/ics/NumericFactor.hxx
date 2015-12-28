@@ -12,7 +12,12 @@ public:
    /** Perform a factorization as part of construction */
    NumericFactor(SymbolicFactor const& sf, T const aval[]);
 
-   /** Perform an in-place solve with factors */
+   /** Perform an in-place solve with factors (single rhs version) */
+   void solve(T x[]) const {
+      solve(1, x, sf_.get_n()); // Call multiple rhs version with nrhs=1
+   }
+
+   /** Perform an in-place solve with factors (multiple rhs version) */
    void solve(int nrhs, T x[], int ldx) const;
 
    /** Permutes rhs to elimination order */
