@@ -29,16 +29,16 @@ SymbolicFactor::SymbolicFactor (int n, int ptr[], int row[], int nemin)
    /* Construct list of nodes */
    factor_mem_size_ = 0;
    int max_contrib_size = 0;
-   for(auto nitr=tree_.leaf_first_begin(); nitr!=tree_.leaf_first_end(); ++nitr) {
-      const AssemblyTree::Node node = *nitr;
-      int m = node.get_nrow();
-      int n = node.get_ncol();
-      nodes_.push_back(Node<double>(*nitr, factor_mem_size_, m));
+   for(auto node=tree_.leaf_first_begin(); node!=tree_.leaf_first_end(); ++node) {
+      int m = node->get_nrow();
+      int n = node->get_ncol();
+      nodes_.push_back(Node<double>(*node, factor_mem_size_, m));
       factor_mem_size_ += m*((long) n);
       max_contrib_size = std::max(max_contrib_size, m-n);
    }
    max_workspace_size_ = max_contrib_size*max_contrib_size + n_;
 
+#if 0
    /* Construct chunk buckets */
    const int MAXROW=50;
    const int MAXCOL=8;
@@ -66,6 +66,7 @@ SymbolicFactor::SymbolicFactor (int n, int ptr[], int row[], int nemin)
          printf(" %4d", clen[i][j]);
       printf("\n");
    }
+#endif
 
 }
 

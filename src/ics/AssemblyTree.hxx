@@ -1,5 +1,6 @@
 #pragma once
 
+#include <limits>
 #include <vector>
 
 #include "boost/iterator/iterator_facade.hpp"
@@ -26,7 +27,9 @@ public:
       /** Constructor */
       Node(AssemblyTree const& tree, int idx)
       : idx(idx), tree_(tree)
-      {}
+      {
+         if(idx > tree_.n_) idx = std::numeric_limits<int>::max();
+      }
 
       /***********************
        * Node specific getters
@@ -99,37 +102,6 @@ public:
       AssemblyTree const& tree_;
    };
 
-   /** Iterator over tree */
-   class node_iterator
-      : public boost::iterator_facade<
-        node_iterator,
-        Node,
-        boost::forward_traversal_tag,
-        Node
-        >
-   {
-   public:
-      explicit node_iterator(
-            AssemblyTree const& tree,
-            std::vector<int>::iterator const it
-            )
-      : tree_(tree), it_(it)
-      {}
-   private:
-      friend class boost::iterator_core_access;
-
-      void increment() { ++it_; }
-      bool equal(node_iterator const& other) const {
-         return (this->it_ == other.it_);
-      }
-      Node dereference() const {
-         return Node(tree_, *it_);
-      }
-
-      AssemblyTree const& tree_;
-      std::vector<int>::iterator it_;
-   };
-
    AssemblyTree(int n)
    : n_(n), nnodes_(0), sptr_(nullptr), sparent_(nullptr), rptr_(nullptr),
      rlist_(nullptr), a_to_l_map_(), nfact_(0), nflop_(0)
@@ -156,11 +128,11 @@ public:
    long getNflop() { return nflop_; }
 
    /* Iterators for leaf first ordering */
-   node_iterator leaf_first_begin() {
-      return node_iterator(*this, leaf_first_order_.begin());
+   std::vector<Node>::const_iterator leaf_first_begin() {
+      return leaf_first_order_.cbegin();
    }
-   node_iterator leaf_first_end() {
-      return node_iterator(*this, leaf_first_order_.end());
+   std::vector<Node>::const_iterator leaf_first_end() {
+      return leaf_first_order_.cend();
    }
 
 private:
@@ -180,7 +152,7 @@ private:
    std::vector<struct ALMap> a_to_l_map_;
 
    /* Iteration order data */
-   std::vector<int> leaf_first_order_; // Ordering that goes from leaves up
+   std::vector<Node> leaf_first_order_; // Ordering that goes from leaves up
    std::vector<int> leaf_prereq_; // Latest child idx in leaf_first_order
 
    /* Stats */

@@ -130,14 +130,15 @@ void AssemblyTree::build_leaf_first_order() {
    int current_level = 0;
    while(leaf_first_order_.size() != (unsigned int) nnodes_) {
       for(int i=0; i<nnodes_; i++) {
-         if(level[i]==current_level) leaf_first_order_.push_back(i);
+         if(level[i]==current_level)
+            leaf_first_order_.push_back( Node(*this, i) );
       }
       current_level++;
    }
 
    /* Construct inverse temporarily for lookup purposes */
    std::vector<int> inverse_lookup(nnodes_);
-   for(int i=0; i<nnodes_; i++) inverse_lookup[ leaf_first_order_[i] ] = i;
+   for(int i=0; i<nnodes_; i++) inverse_lookup[ leaf_first_order_[i].idx ] = i;
 
    /* Build prerequisite list: posn of latest child node in leaf_first_order_ */
    leaf_prereq_.clear();

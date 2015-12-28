@@ -13,7 +13,7 @@ namespace ics {
 template <typename T>
 class Node {
 public:
-   Node(AssemblyTree::Node const &node, long loffset, int ldl)
+   explicit Node(AssemblyTree::Node const& node, long loffset, int ldl)
    : node_(node), m_(node.get_nrow()), n_(node.get_ncol()), loffset_(loffset),
      ldl_(ldl)
    {}
