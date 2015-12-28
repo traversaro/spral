@@ -11,7 +11,7 @@ namespace ics {
 
 /* Constructs symbolic factorization from matrix data */
 SymbolicFactor::SymbolicFactor (int n, int ptr[], int row[], int nemin)
-: nemin(nemin), nfact(0), nflop(0), n_(n), nnodes_(0), perm_(nullptr),
+: nemin(nemin), n_(n), nnodes_(0), perm_(nullptr),
   factor_mem_size_(0), max_workspace_size_(0), tree_(n)
 {
 

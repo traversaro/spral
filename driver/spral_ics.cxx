@@ -53,8 +53,8 @@ int main(int argc, char *const * argv) {
    clock_gettime(CLOCK_REALTIME, &t2);
    printf("ok\n");
    printf("Analyse took %e\n", tdiff(t1, t2));
-   printf("Predicted nfact = %.2le\n", (double) sfact.nfact);
-   printf("Predicted nflop = %.2le\n", (double) sfact.nflop);
+   printf("Predicted nfact = %.2le\n", (double) sfact.get_nfact());
+   printf("Predicted nflop = %.2le\n", (double) sfact.get_nflop());
 
    /* Factorize */
    printf("\nFactorize...");

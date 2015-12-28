@@ -84,7 +84,9 @@ public:
 
    /* Information */
    const int nemin;
-   long nfact, nflop;
+
+   long get_nfact() { return tree_.get_nfact(); }
+   long get_nflop() { return tree_.get_nflop(); }
 
 protected:
    /* Core data */
