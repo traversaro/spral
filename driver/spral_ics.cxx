@@ -138,9 +138,17 @@ int main(int argc, char *const * argv) {
 
    /* Generate solution and rhs */
    double *x = new double[n];
-   for(int i=0; i<n; i++) x[i] = 0.1*i;
+   for(int i=0; i<n; ++i) x[i] = 0.1*(i+1);
    double *rhs = new double[n];
    spmv(n, ptr, row, val, x, rhs);
+   if(print_matrix) {
+      printf("x = ");
+      for(int i=0; i<n; ++i) printf(" %e", x[i]);
+      printf("\n");
+      printf("rhs = ");
+      for(int i=0; i<n; ++i) printf(" %e", rhs[i]);
+      printf("\n");
+   }
 
    /* Solve */
    printf("\nSolve...");
@@ -151,11 +159,16 @@ int main(int argc, char *const * argv) {
    clock_gettime(CLOCK_REALTIME, &t2);
    printf("ok\n");
    printf("solve took %e\n", tdiff(t1, t2));
+   if(print_matrix) {
+      printf("soln = ");
+      for(int i=0; i<n; ++i) printf(" %e", soln[i]);
+      printf("\n");
+   }
 
    /* Errors */
    double fwd_err = 0.0;
    for(int i=0; i<n; i++) fwd_err = std::max(fwd_err, fabs(soln[i]-x[i]));
-   printf("fwd error = %e\n", fwd_err);
+   printf("\nfwd error = %e\n", fwd_err);
    printf("bwd error = %e\n", calc_bwd_error(n, ptr, row, val, soln, rhs));
 
    /* Cleanup */
