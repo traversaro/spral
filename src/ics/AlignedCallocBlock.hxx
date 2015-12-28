@@ -9,6 +9,8 @@ namespace ics {
 template <typename T>
 class AlignedCallocBlock {
 public:
+   AlignedCallocBlock(AlignedCallocBlock const&) = delete;
+   void operator=(AlignedCallocBlock const&) = delete;
    AlignedCallocBlock(size_t nmemb) {
       nmemb += 32/sizeof(T); // Ensure space to align to 32-byte boundary
       base_ = calloc(nmemb, sizeof(T)); // Allocate memory

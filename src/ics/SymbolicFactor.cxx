@@ -36,7 +36,8 @@ SymbolicFactor::SymbolicFactor (int n, int ptr[], int row[], int nemin)
       factor_mem_size_ += m*((long) n);
       max_contrib_size = std::max(max_contrib_size, m-n);
    }
-   max_workspace_size_ = max_contrib_size*max_contrib_size + n_;
+   max_workspace_size_ = max_contrib_size*max_contrib_size*sizeof(double) +
+      n_*sizeof(int);
 
    /*printf("perm_ =");
    for(int i=0; i<n_; i++) printf(" %d", perm_[i]);

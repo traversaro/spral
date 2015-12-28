@@ -24,6 +24,8 @@ public:
    T *get(size_t num) {
       T *ptr = (T *) ( ((char *) workspace_) + head_ );
       head_ += num*sizeof(T);
+      if(head_ > maxsz_) 
+         throw std::runtime_error("Asked for too much workspace");
       return ptr;
    }
 
