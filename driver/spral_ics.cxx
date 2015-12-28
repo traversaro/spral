@@ -36,10 +36,10 @@ int main(int argc, char *const * argv) {
    if(print_matrix) {
       printf("Matrix:\n");
       for(int i=0; i<n; i++) {
-         printf("%4d:", i);
+         printf("%4d [%4d:%4d]:", i, ptr[i], ptr[i+1]-1);
          for(int j=ptr[i]; j<ptr[i+1]; ++j) printf(" %10d", row[j]);
          printf("\n");
-         printf("%4d:", i);
+         printf("%4d [%4d:%4d]:", i, ptr[i], ptr[i+1]-1);
          for(int j=ptr[i]; j<ptr[i+1]; ++j) printf(" %10.2e", val[j]);
          printf("\n");
       }
