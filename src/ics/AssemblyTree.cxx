@@ -89,13 +89,13 @@ void AssemblyTree::construct_tree (int const ptr[], int const row[],
       Node(*this, node).construct_row_map(map);
       for(int col=sptr_[node]; col<sptr_[node+1]; ++col) {
          int src_col = inverse_perm[col];
-         for(int i=ptr[src_col]; i<ptr[src_col+1]; ++i) {
-            int r = perm[ row[i] ];
+         for(int i=ptr_full[src_col]; i<ptr_full[src_col+1]; ++i) {
+            int r = perm[ row_full[i] ];
             if(r < col) continue; // In upper triangle of L: ignore
             a_to_l_map_.push_back(ALMap(
-                  a_half_map[i], // Source in A
-                  map[r],        // Destination row of node in L
-                  col            // Destination col of node in L
+                  a_half_map[i],    // Source in A
+                  map[r],           // Destination row of node in L
+                  col-sptr_[node]   // Destination col of node in L
                   ));
          }
       }
