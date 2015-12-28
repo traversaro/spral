@@ -71,6 +71,68 @@ public:
       }
    }
 
+   template <typename anc_it_type>
+   void forward_solve(int nrhs, T* x, int ldx, T const* lval,
+         anc_it_type anc_begin, anc_it_type anc_end,
+         WorkspaceManager &memhandler) const {
+      /* Perform solve with diagonal block */
+      T const* ldiag = &lval[loffset_];
+      T* xdiag = &x[*node_.row_begin()];
+      trsm<T>('L', 'L', 'N', 'N', n_, nrhs, 1.0, ldiag, ldl_, xdiag, ldx);
+
+      if(m_-n_>0) { /* Entries below diagonal block exist */
+         /* Get some workspace to calculate result in */
+         int ldxlocal = m_ - n_;
+         T *xlocal = memhandler.get<T>(nrhs*ldxlocal);
+
+         /* Calculate contributions to ancestors */
+         T const* lrect = &ldiag[n_];
+         gemm<T>('N', 'N', m_-n_, nrhs, n_, -1.0, lrect, ldl_, xdiag, ldx, 0.0,
+               xlocal, ldxlocal);
+
+         /* Distribute contributions */
+         int idx=0;
+         for(auto row = node_.row_begin(); row!=node_.row_end(); ++row, ++idx)
+            for(int r=0; r<nrhs; r++)
+               x[r*ldx + *row] += xlocal[r*ldxlocal + idx];
+
+         /* Release workspace */
+         memhandler.release<T>(xlocal, nrhs*ldxlocal);
+      }
+   }
+
+   template <typename anc_it_type>
+   void backward_solve(int nrhs, T* x, int ldx, T const* lval,
+         anc_it_type anc_begin, anc_it_type anc_end,
+         WorkspaceManager &memhandler) const {
+      /* Establish useful pointers */
+      T const* ldiag = &lval[loffset_];
+      T* xdiag = &x[*node_.row_begin()];
+
+      if(m_-n_>0) { /* Entries below diagonal block exist */
+         /* Get some workspace to calculate result in */
+         int ldxlocal = m_ - n_;
+         T *xlocal = memhandler.get<T>(nrhs*ldxlocal);
+
+         /* Gather values from ancestors */
+         int idx=0;
+         for(auto row = node_.row_begin(); row!=node_.row_end(); ++row, ++idx)
+            for(int r=0; r<nrhs; r++)
+               xlocal[r*ldxlocal + idx] = x[r*ldx + *row] ;
+
+         /* Apply update to xdiag[] */
+         T const* lrect = &ldiag[n_];
+         gemm<T>('T', 'N', n_, nrhs, m_-n_, -1.0, lrect, ldl_, xlocal,
+               ldxlocal, 1.0, x, ldx);
+
+         /* Release workspace */
+         memhandler.release<T>(xlocal, nrhs*ldxlocal);
+      }
+
+      /* Perform solve with diagonal block */
+      trsm<T>('L', 'L', 'T', 'N', n_, nrhs, 1.0, ldiag, ldl_, xdiag, ldx);
+   }
+private:
    /** Adds the contribution in contrib as per list (of rows).
     *  Uses map as workspace.
     *  \returns Number of columns found relevant. */
@@ -95,30 +157,7 @@ public:
       return std::distance(row_start, row_end);
    }
 
-   template <typename anc_it_type>
-   void forward_solve(int nrhs, T* x, int ldx, T const* lval,
-         anc_it_type anc_begin, anc_it_type anc_end,
-         WorkspaceManager &memhandler) const {
-      /* Perform solve with diagonal block */
-      T* xdiag = &x[*node_.row_begin()];
-      trsm<T>('L', 'L', 'N', 'N', n_, nrhs, 1.0, &lval[loffset_], ldl_, xdiag,
-            ldx);
-
-      /* Calculate contributions to ancestors */
-   }
-
-   template <typename anc_it_type>
-   void backward_solve(int nrhs, T* x, int ldx, T const* lval,
-         anc_it_type anc_begin, anc_it_type anc_end,
-         WorkspaceManager &memhandler) const {
-      /* Gather contributions from ancestors */
-
-      /* Perform solve with diagonal block */
-      T* xdiag = &x[*node_.row_begin()];
-      trsm<T>('L', 'L', 'T', 'N', n_, nrhs, 1.0, &lval[loffset_], ldl_, xdiag,
-            ldx);
-   }
-private:
+   /* Members */
    AssemblyTree::Node const& node_;
    int const m_;
    int const n_;

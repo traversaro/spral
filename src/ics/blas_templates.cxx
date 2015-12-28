@@ -7,6 +7,20 @@ namespace ics {
  * BLAS
  ***************************************************************************/
 
+/* GEMM */
+extern "C" {
+   void dgemm_(char const* transa, char const* transb, int const*m,
+         int const* n, int const* k, double const* alpha, double const* a,
+         int const* lda, double const* b, int const* ldb, double const* beta,
+         double* c, int const* ldc);
+}
+template<> void gemm<double>(char transa, char transb, int m, int n, int k,
+      double alpha, double const* a, int lda, double const* b, int ldb,
+      double beta, double* c, int ldc) {
+   dgemm_(&transa, &transb, &m, &n, &k, &alpha, a, &lda, b, &ldb, &beta, c,
+         &ldc);
+}
+
 /* SYRK */
 extern "C" {
    void dsyrk_(char const* uplo, char const* trans, int const* n, int const* k,

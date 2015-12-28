@@ -7,6 +7,10 @@ namespace ics {
  * BLAS
  ***************************************************************************/
 
+/* GEMM */
+template<typename T> void gemm(char transa, char transb, int m, int n, int k,
+      T alpha, T const* a, int lda, T const* b, int ldb, T beta, T* c, int ldc);
+
 /* SYRK */
 template<typename T> void syrk(char uplo, char trans, int n, int k, T alpha,
       T const* a, int lda, T beta, T* c, int ldc);
