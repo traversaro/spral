@@ -10,30 +10,39 @@ float tdiff(const struct timespec &t1, const struct timespec &t2) {
    return t2.tv_sec - t1.tv_sec + 1e-9*(t2.tv_nsec - t1.tv_nsec);
 }
 
-void process_options(int argc, char *const * argv, bool& print_matrix, int& nemin) {
-   boost::program_options::options_description desc("Allowed options");
-   desc.add_options()
-      ("help", "produce help message")
-      ("print-matrix", "print input matrix")
-      ("nemin", boost::program_options::value<int>(&nemin)->default_value(8),
-         "supernode amalgamation parameter")
-      ;
-   boost::program_options::variables_map vm;
-   boost::program_options::store(boost::program_options::parse_command_line(argc, argv, desc), vm);
-   boost::program_options::notify(vm);
+struct DriverOptions {
+   bool print_matrix;
+   bool print_factors;
+   int nemin;
 
-   /* Print help and exit if requested */
-   if( vm.count("help") ) {
-      std::cout << desc << std::endl;
-      exit(1);
+   DriverOptions(int argc, char *const * argv) {
+      boost::program_options::options_description desc("Allowed options");
+      desc.add_options()
+         ("help", "produce help message")
+         ("print-matrix", "print input matrix")
+         ("print-factors", "print numeric factors")
+         ("nemin", boost::program_options::value<int>(&nemin)->default_value(8),
+            "supernode amalgamation parameter")
+         ;
+      boost::program_options::variables_map vm;
+      boost::program_options::store(boost::program_options::parse_command_line(argc, argv, desc), vm);
+      boost::program_options::notify(vm);
+
+      /* Print help and exit if requested */
+      if( vm.count("help") ) {
+         std::cout << desc << std::endl;
+         exit(1);
+      }
+
+      /* Set values that require present/not-present */
+      print_matrix = ( vm.count("print-matrix") );
+      print_factors = ( vm.count("print-factors") );
+
+      /* Feedback non-obvious settings to user */
+      std::cout << "nemin = " << nemin << std::endl;
    }
+};
 
-   /* Set values that require present/not-present */
-   print_matrix = ( vm.count("print-matrix") );
-
-   /* Feedback non-obvious settings to user */
-   std::cout << "nemin = " << nemin << std::endl;
-}
 
 template <typename T>
 void spmv(int n, int const* ptr, int const* row, T const* val, T const* x, T *y){
@@ -93,9 +102,7 @@ T calc_bwd_error(int n, int const* ptr, int const* row, T const* val, T const* s
 
 int main(int argc, char *const * argv) {
    /* Process options */
-   bool print_matrix;
-   int nemin;
-   process_options(argc, argv, print_matrix, nemin);
+   DriverOptions options(argc, argv);
 
    /* Read in a matrix */
    printf("Reading...");
@@ -113,7 +120,7 @@ int main(int argc, char *const * argv) {
    }
    printf("ok\n");
 
-   if(print_matrix) {
+   if(options.print_matrix) {
       printf("Matrix:\n");
       for(int i=0; i<n; i++) {
          printf("%4d [%4d:%4d]:", i, ptr[i], ptr[i+1]-1);
@@ -129,12 +136,19 @@ int main(int argc, char *const * argv) {
    printf("\nAnalyse...");
    struct timespec t1, t2;
    clock_gettime(CLOCK_REALTIME, &t1);
-   spral::ics::SymbolicFactor sfact(n, ptr, row, nemin);
+   spral::ics::SymbolicFactor sfact(n, ptr, row, options.nemin);
    clock_gettime(CLOCK_REALTIME, &t2);
    printf("ok\n");
    printf("Analyse took %e\n", tdiff(t1, t2));
    printf("Predicted nfact = %.2le\n", (double) sfact.get_nfact());
    printf("Predicted nflop = %.2le\n", (double) sfact.get_nflop());
+
+   if(options.print_matrix) {
+      printf("perm = ");
+      int const* perm = sfact.get_perm();
+      for(int i=0; i<n; i++) printf(" %d", perm[i]);
+      printf("\n");
+   }
 
    /* Factorize */
    printf("\nFactorize...");
@@ -143,13 +157,14 @@ int main(int argc, char *const * argv) {
    clock_gettime(CLOCK_REALTIME, &t2);
    printf("ok\n");
    printf("Factorize took %e\n", tdiff(t1, t2));
+   if(options.print_factors) nfact.print();
 
    /* Generate solution and rhs */
    double *x = new double[n];
    for(int i=0; i<n; ++i) x[i] = 0.1*(i+1);
    double *rhs = new double[n];
    spmv(n, ptr, row, val, x, rhs);
-   if(print_matrix) {
+   if(options.print_matrix) {
       printf("x = ");
       for(int i=0; i<n; ++i) printf(" %e", x[i]);
       printf("\n");
@@ -167,7 +182,7 @@ int main(int argc, char *const * argv) {
    clock_gettime(CLOCK_REALTIME, &t2);
    printf("ok\n");
    printf("solve took %e\n", tdiff(t1, t2));
-   if(print_matrix) {
+   if(options.print_matrix) {
       printf("soln = ");
       for(int i=0; i<n; ++i) printf(" %e", soln[i]);
       printf("\n");
