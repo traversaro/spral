@@ -11,8 +11,8 @@ namespace ics {
 
 /* Constructs symbolic factorization from matrix data */
 SymbolicFactor::SymbolicFactor (int n, int ptr[], int row[], int nemin)
-: nemin(nemin), n_(n), nnodes_(0), perm_(nullptr),
-  factor_mem_size_(0), max_workspace_size_(0), tree_(n)
+: nemin(nemin), n_(n), perm_(nullptr), factor_mem_size_(0),
+  max_workspace_size_(0), tree_(n)
 {
 
    /* Perform METIS ordering */
@@ -29,7 +29,7 @@ SymbolicFactor::SymbolicFactor (int n, int ptr[], int row[], int nemin)
    /* Construct list of nodes */
    factor_mem_size_ = 0;
    int max_contrib_size = 0;
-   for(auto node=tree_.leaf_first_begin(); node!=tree_.leaf_first_end(); ++node) {
+   for(auto node=tree_.begin(); node!=tree_.end(); ++node) {
       int m = node->get_nrow();
       int n = node->get_ncol();
       nodes_.push_back(Node<double>(*node, factor_mem_size_, m));
@@ -38,10 +38,6 @@ SymbolicFactor::SymbolicFactor (int n, int ptr[], int row[], int nemin)
    }
    max_workspace_size_ = max_contrib_size*max_contrib_size*sizeof(double) +
       n_*sizeof(int);
-
-   /*printf("perm_ =");
-   for(int i=0; i<n_; i++) printf(" %d", perm_[i]);
-   printf("\n");*/
 
 #if 0
    /* Construct chunk buckets */

@@ -32,7 +32,7 @@ public:
       void increment() {
          if(!node_) return; // Can't increment a root, so don't try
          int parent = node_->get_parent_node_idx();
-         if(parent >= sfact_.nnodes_) {
+         if(parent >= sfact_.get_nnodes()) {
             node_ = nullptr;
             return;
          }
@@ -95,12 +95,12 @@ public:
    long get_nfact() const { return tree_.get_nfact(); }
    long get_nflop() const { return tree_.get_nflop(); }
    int get_n() const { return n_; }
+   int get_nnodes() const { return tree_.get_nnodes(); }
    int const* get_perm() const { return perm_; }
 
 private:
    /* Core data */
    int n_;
-   int nnodes_;
    int *perm_;
    long factor_mem_size_;
    long max_workspace_size_;
