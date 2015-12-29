@@ -124,8 +124,17 @@ public:
    /** Initializer. IMPORTANT: Changes perm */
    void construct_tree(int const ptr[], int const row[], int perm[], int nemin);
 
+   int get_nnodes() const { return nnodes_; }
    long get_nfact() const { return nfact_; }
    long get_nflop() const { return nflop_; }
+
+   /* Iterators for standard ordering */
+   std::vector<Node>::const_iterator begin() const {
+      return nodes_.cbegin();
+   }
+   std::vector<Node>::const_iterator end() const {
+      return nodes_.cend();
+   }
 
    /* Iterators for leaf first ordering */
    std::vector<Node>::const_iterator leaf_first_begin() const {
@@ -152,6 +161,7 @@ private:
    std::vector<struct ALMap> a_to_l_map_;
 
    /* Iteration order data */
+   std::vector<Node> nodes_; // In standard ordering
    std::vector<Node> leaf_first_order_; // Ordering that goes from leaves up
    std::vector<int> leaf_prereq_; // Latest child idx in leaf_first_order
 

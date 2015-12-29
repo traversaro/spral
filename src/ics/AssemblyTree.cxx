@@ -108,6 +108,11 @@ void AssemblyTree::construct_tree (int const ptr[], int const row[],
    delete[] a_half_map;
    delete[] ptr_full;
    delete[] row_full;
+
+   /* Construct nodes list */
+   nodes_.reserve(nnodes_); // Ensure we don't need to resize
+   for(int i=0; i<nnodes_; i++)
+      nodes_.push_back(Node(*this, i));
    
    /* Build leaf first ordering */
    build_leaf_first_order();
