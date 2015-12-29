@@ -34,9 +34,15 @@ public:
    /** Performs bacward solve in-place on rhs in elim order */
    void backward_solve(int nrhs, T x[], int ldx) const;
 
+   /** Prints numeric factors supernode by supernode */
+   void print() const {
+      for(auto node=sf_.node_begin(); node!=sf_.node_end(); ++node)
+         node->print(lmem_.get_ptr());
+   }
+
 private:
    const SymbolicFactor &sf_;
-   AlignedCallocBlock<T> lmem;
+   AlignedCallocBlock<T> lmem_;
 };
 
 } /* namespace ics */

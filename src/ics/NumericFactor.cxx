@@ -5,13 +5,13 @@ namespace spral {
 namespace ics {
 
 NumericFactor::NumericFactor(const SymbolicFactor &sf, const T aval[])
-: sf_(sf), lmem(sf.get_factor_mem_size())
+: sf_(sf), lmem_(sf.get_factor_mem_size())
 {
    WorkspaceManager memhandler(sf_.get_max_workspace_size());
    /* Iterate over chunks, factorizing */
    for(auto node = sf_.node_begin(); node != sf_.node_end(); ++node) {
       node->factor(
-            aval, lmem.get_ptr(), sf_.get_ancestor_iterator(*node),
+            aval, lmem_.get_ptr(), sf_.get_ancestor_iterator(*node),
             sf_.get_ancestor_iterator_root(), memhandler
             );
    }
@@ -52,7 +52,7 @@ void NumericFactor::forward_solve(int nrhs, T x[], int ldx) const {
    /* Iterate over node forward, doing forward solve  */
    for(auto node = sf_.node_begin(); node != sf_.node_end(); ++node) {
       node->forward_solve(
-            nrhs, x, ldx, lmem.get_ptr(), sf_.get_ancestor_iterator(*node),
+            nrhs, x, ldx, lmem_.get_ptr(), sf_.get_ancestor_iterator(*node),
             sf_.get_ancestor_iterator_root(), memhandler
             );
    }
@@ -63,7 +63,7 @@ void NumericFactor::backward_solve(int nrhs, T x[], int ldx) const {
    /* Iterate over nodes backwards, doing backward solve */
    for(auto node = sf_.node_rbegin(); node != sf_.node_rend(); ++node) {
       node->backward_solve(
-            nrhs, x, ldx, lmem.get_ptr(), sf_.get_ancestor_iterator(*node),
+            nrhs, x, ldx, lmem_.get_ptr(), sf_.get_ancestor_iterator(*node),
             sf_.get_ancestor_iterator_root(), memhandler
             );
    }
