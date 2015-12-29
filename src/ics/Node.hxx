@@ -21,6 +21,22 @@ public:
    int get_parent_node_idx() const {
       return node_.get_parent_node().idx;
    }
+   int get_idx(void) const {
+      return node_.idx;
+   }
+
+   void print(T const*lval) const {
+      printf("NODE %d is %d x %d (parent %d)\n", node_.idx, m_, n_,
+            node_.get_parent_node().idx);
+      int idx=0;
+      for(auto row=node_.row_begin(); row!=node_.row_end(); ++row, ++idx) {
+         printf("%d:", *row);
+         for(int col=0; col<n_; ++col)
+            printf(" %e", lval[loffset_ + col*ldl_ + idx]);
+         printf("\n");
+      }
+      printf("\n");
+   }
 
    template <typename anc_it_type>
    void factor(T const* aval, T* lval, anc_it_type anc_begin,
@@ -132,6 +148,7 @@ public:
       /* Perform solve with diagonal block */
       trsm<T>('L', 'L', 'T', 'N', n_, nrhs, 1.0, ldiag, ldl_, xdiag, ldx);
    }
+
 private:
    /** Adds the contribution in contrib as per list (of rows).
     *  Uses map as workspace.
