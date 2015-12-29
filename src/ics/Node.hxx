@@ -108,7 +108,7 @@ public:
 
          /* Distribute contributions */
          int idx=0;
-         for(auto row = node_.row_begin(); row!=node_.row_end(); ++row, ++idx)
+         for(auto row=node_.row_begin()+n_; row!=node_.row_end(); ++row, ++idx)
             for(int r=0; r<nrhs; r++)
                x[r*ldx + *row] += xlocal[r*ldxlocal + idx];
 
@@ -132,14 +132,14 @@ public:
 
          /* Gather values from ancestors */
          int idx=0;
-         for(auto row = node_.row_begin(); row!=node_.row_end(); ++row, ++idx)
+         for(auto row=node_.row_begin()+n_; row!=node_.row_end(); ++row, ++idx)
             for(int r=0; r<nrhs; r++)
-               xlocal[r*ldxlocal + idx] = x[r*ldx + *row] ;
+               xlocal[r*ldxlocal + idx] = x[r*ldx + *row];
 
          /* Apply update to xdiag[] */
          T const* lrect = &ldiag[n_];
          gemm<T>('T', 'N', n_, nrhs, m_-n_, -1.0, lrect, ldl_, xlocal,
-               ldxlocal, 1.0, x, ldx);
+               ldxlocal, 1.0, xdiag, ldx);
 
          /* Release workspace */
          memhandler.release<T>(xlocal, nrhs*ldxlocal);
