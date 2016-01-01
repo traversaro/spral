@@ -50,6 +50,11 @@ public:
       Node get_parent_node(void) const {
          return Node(tree_, tree_.sparent_[idx]);
       }
+      /** Return first child node: descendants are exactly those nodes in range
+       *  [first_child:idx-1] */
+      Node get_first_child(void) const {
+         return Node(tree_, tree_.first_child_[idx]);
+      }
       /** Return iterator to start of a_to_l list for node */
       std::vector<struct ALMap>::const_iterator a_to_l_begin(void) const {
          return std::next(
@@ -91,6 +96,12 @@ public:
       /** Constructs a lookup array from relevant entries of rlist[].
        *  Does not zero any non-present entries! */
       void construct_row_map(int *map) const;
+      /** Return true if other is a descendant of this node, false o'wise. If
+       *  other == *this, returns true. */
+      bool has_descendant(Node const& other) const {
+         return (other.idx >= tree_.first_child_[idx] &&
+                 other.idx <= idx);
+      }
 
       /***********************
        * Public members
@@ -128,12 +139,20 @@ public:
    long get_nfact() const { return nfact_; }
    long get_nflop() const { return nflop_; }
 
-   /* Iterators for standard ordering */
+   /* Iterators for standard ordering (bottom to top) */
    std::vector<Node>::const_iterator begin() const {
       return nodes_.cbegin();
    }
    std::vector<Node>::const_iterator end() const {
       return nodes_.cend();
+   }
+
+   /* Iterators for standard reverse ordering (top to bottom) */
+   std::vector<Node>::const_reverse_iterator rbegin() const {
+      return nodes_.crbegin();
+   }
+   std::vector<Node>::const_reverse_iterator rend() const {
+      return nodes_.crend();
    }
 
    /* Iterators for leaf first ordering */
@@ -164,6 +183,7 @@ private:
    std::vector<Node> nodes_; // In standard ordering
    std::vector<Node> leaf_first_order_; // Ordering that goes from leaves up
    std::vector<int> leaf_prereq_; // Latest child idx in leaf_first_order
+   std::vector<int> first_child_; // Index of lowest numbered child
 
    /* Stats */
    long nfact_;

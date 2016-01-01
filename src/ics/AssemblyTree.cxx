@@ -113,6 +113,16 @@ void AssemblyTree::construct_tree (int const ptr[], int const row[],
    nodes_.reserve(nnodes_); // Ensure we don't need to resize
    for(int i=0; i<nnodes_; i++)
       nodes_.push_back(Node(*this, i));
+
+   /* Construct first_child_ list */
+   first_child_.reserve(nnodes_);
+   for(int i=0; i<nnodes_; ++i)
+      first_child_[i] = i;
+   for(int i=0; i<nnodes_; ++i) {
+      int parent = sparent_[i];
+      if(parent >= nnodes_) continue; // This is a root
+      first_child_[parent] = std::min(first_child_[parent], first_child_[i]);
+   }
    
    /* Build leaf first ordering */
    build_leaf_first_order();

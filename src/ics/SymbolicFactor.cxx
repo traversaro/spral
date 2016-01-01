@@ -4,6 +4,7 @@
 
 #include "AssemblyTree.hxx"
 #include "Chunk.hxx"
+#include "Chunker.hxx"
 #include "spral_metis_wrapper.h"
 
 namespace spral {
@@ -39,7 +40,7 @@ SymbolicFactor::SymbolicFactor (int n, int ptr[], int row[], int nemin)
    max_workspace_size_ = max_contrib_size*max_contrib_size*sizeof(double) +
       n_*sizeof(int);
 
-#if 0
+#if 1
    /* Construct chunk buckets */
    const int MAXROW=50;
    const int MAXCOL=8;
