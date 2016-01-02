@@ -50,7 +50,7 @@ SymbolicFactor::SymbolicFactor (int n, int ptr[], int row[], int nemin)
    }
    delete[] map;
 
-#if 0
+#if 1
    /* Construct list of chunks */
    Chunker chunker(tree_);
    for(auto node=tree_.begin(); node!=tree_.end(); ++node) {

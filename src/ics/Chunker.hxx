@@ -17,7 +17,7 @@ private:
    static int const NUM_PER_CHUNK = 4; //< Number of nodes to group per chunk
    typedef std::pair<int,int> Coord;
 public:
-   Chunker(AssemblyTree tree)
+   Chunker(AssemblyTree const& tree)
    : node_to_chunk_(tree.get_nnodes(), -1)
    {
       /* Find depth for each node (distance from root) */
@@ -31,14 +31,14 @@ public:
       }
 
       /* Sort nodes into buckets based on their sizes */
-      std::unordered_map< Coord, AssemblyTree::Node, CoordHash > buckets;
+      std::unordered_multimap< Coord, AssemblyTree::Node, CoordHash > buckets;
       for(auto node=tree.rbegin(); node!=tree.rend(); ++node)
          buckets.emplace( get_coord(*node), *node );
 
       /* Starting with largest buckets, try and fill out chunks */
       int next_chunk=0;
-      for(int c=MAX_NCOL-1; c>0; --c) {
-         for(int r=MAX_NROW-1; r>0; --r) {
+      for(int c=MAX_NCOL-1; c>=0; --c) {
+         for(int r=MAX_NROW-1; r>=0; --r) {
             while(buckets.count( Coord(r,c) ) > 0) {
                auto node = buckets.find( Coord(r, c) ); // Any will do!
                std::vector<AssemblyTree::Node> chunk = gather_chunk(buckets, node);
@@ -94,8 +94,8 @@ private:
 
    Coord get_coord(AssemblyTree::Node const& node) {
       return Coord(
-         std::max( (node.get_nrow()-1) / ROW_CHUNK_SIZE, MAX_NROW ),
-         std::max( (node.get_ncol()-1) / COL_CHUNK_SIZE, MAX_NCOL )
+         std::min( (node.get_nrow()-1) / ROW_CHUNK_SIZE, MAX_NROW ),
+         std::min( (node.get_ncol()-1) / COL_CHUNK_SIZE, MAX_NCOL )
          );
    }
 
