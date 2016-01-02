@@ -37,8 +37,8 @@ public:
 
       /* Starting with largest buckets, try and fill out chunks */
       int next_chunk=0;
-      for(int c=MAX_NCOL-1; c>0; ++c) {
-         for(int r=MAX_NROW-1; r>0; ++r) {
+      for(int c=MAX_NCOL-1; c>0; --c) {
+         for(int r=MAX_NROW-1; r>0; --r) {
             while(buckets.count( Coord(r,c) ) > 0) {
                auto node = buckets.find( Coord(r, c) ); // Any will do!
                std::vector<AssemblyTree::Node> chunk = gather_chunk(buckets, node);
@@ -87,6 +87,9 @@ private:
             }
          }
       }
+
+      /* Otherwise, return non-full chunk! */
+      return chunk;
    }
 
    Coord get_coord(AssemblyTree::Node const& node) {
