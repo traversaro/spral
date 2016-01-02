@@ -42,10 +42,12 @@ SymbolicFactor::SymbolicFactor (int n, int ptr[], int row[], int nemin)
 
    /* Now we know where nodes are in memory, build map */
    int *map = new int[n_];
-   for(auto node=nodes_.begin(); node!=nodes_.end(); ++node)
+   for(auto node=nodes_.begin(); node!=nodes_.end(); ++node) {
       node->build_contribution_map(
             get_ancestor_iterator(*node), get_ancestor_iterator_root(), map
             );
+      chunks_.push_back(&(*node));
+   }
    delete[] map;
 
 #if 0

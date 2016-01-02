@@ -73,6 +73,16 @@ public:
    std::vector< Node<T> >::const_iterator node_end(void) const {
       return nodes_.cend();
    }
+
+   /** Returns iterator to beginning of chunk list */
+   std::vector< Factorizable<T>* >::const_iterator chunk_begin(void) const {
+      return chunks_.cbegin();
+   }
+   /** Returns iterator to end of chunk list */
+   std::vector< Factorizable<T>* >::const_iterator chunk_end(void) const {
+      return chunks_.cend();
+   }
+
    /** Returns iterator to reverse beginning of node list (in assembly tree order) */
    std::vector< Node<T> >::const_reverse_iterator node_rbegin(void) const {
       return nodes_.crbegin();
@@ -106,6 +116,7 @@ private:
    long max_workspace_size_;
    AssemblyTree tree_;
    std::vector< Node<T> > nodes_;
+   std::vector< Factorizable<T>* > chunks_;
 
 };
 

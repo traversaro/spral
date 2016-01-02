@@ -3,6 +3,7 @@
 #include "blas_templates.hxx"
 
 #include "AssemblyTree.hxx"
+#include "Factorizable.hxx"
 #include "ICSExceptions.hxx"
 #include "SimdVec.hxx"
 #include "WorkspaceManager.hxx"
@@ -11,7 +12,7 @@ namespace spral {
 namespace ics {
 
 template <typename T>
-class Node {
+class Node : public Factorizable<T> {
    class NodeToNodeMap {
       public:
       NodeToNodeMap(Node<T> const& ancestor)
@@ -55,7 +56,6 @@ public:
    void build_contribution_map(anc_it_type anc_begin, anc_it_type anc_end, int *map) {
       if(m_ - n_ <= 0) return; // no contrib block => no map
 
-      auto row_start = std::next(node_.row_begin(), n_);
       for(auto anc_itr = anc_begin; anc_itr != anc_end; ++anc_itr) {
          contribution_map_.push_back( NodeToNodeMap(*anc_itr) );
       }

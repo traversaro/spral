@@ -222,6 +222,7 @@ am__libspral_a_SOURCES_DIST = src/blas_iface.f90 src/core_analyse.f90 \
 	src/ics/AlignedCallocBlock.hxx src/ics/AssemblyTree.cxx \
 	src/ics/AssemblyTree.hxx src/ics/blas_templates.hxx \
 	src/ics/blas_templates.cxx src/ics/Chunk.hxx \
+	src/ics/Chunker.hxx src/ics/Factorizable.hxx \
 	src/ics/ICSExceptions.hxx src/ics/Node.hxx \
 	src/ics/NumericFactor.cxx src/ics/NumericFactor.hxx \
 	src/ics/SimdVec.hxx src/ics/SymbolicFactor.cxx \
@@ -1097,6 +1098,7 @@ libspral_a_SOURCES = src/blas_iface.f90 src/core_analyse.f90 \
 	src/ics/AlignedCallocBlock.hxx src/ics/AssemblyTree.cxx \
 	src/ics/AssemblyTree.hxx src/ics/blas_templates.hxx \
 	src/ics/blas_templates.cxx src/ics/Chunk.hxx \
+	src/ics/Chunker.hxx src/ics/Factorizable.hxx \
 	src/ics/ICSExceptions.hxx src/ics/Node.hxx \
 	src/ics/NumericFactor.cxx src/ics/NumericFactor.hxx \
 	src/ics/SimdVec.hxx src/ics/SymbolicFactor.cxx \
