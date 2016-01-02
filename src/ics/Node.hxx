@@ -12,11 +12,54 @@ namespace ics {
 
 template <typename T>
 class Node {
+   class NodeToNodeMap {
+      public:
+      NodeToNodeMap(Node<T> const& ancestor)
+      : ancestor_(ancestor)
+      {
+      }
+
+      /** Adds the contribution in contrib as per list (of rows).
+       *  Uses map as workspace.
+       *  \returns Number of columns found relevant. */
+      template <typename it_type>
+      int apply(T *lval, it_type row_start, it_type row_end,
+            T const* contrib, int ldcontrib, int* map) const {
+         T *lptr = &lval[ancestor_.loffset_];
+         ancestor_.node_.construct_row_map(map);
+         for(auto src_col=row_start; src_col!=row_end; ++src_col) {
+            int cidx = std::distance(row_start, src_col);
+            if(! ancestor_.node_.contains_column(*src_col) )
+               return cidx; // Done: return #cols used
+            int col = map[ *src_col ]; // NB: Equal to *src_col - sptr[node]
+            T const* src = &contrib[cidx*(ldcontrib+1)]; // Start on diagonal
+            T *dest = &lptr[col * ancestor_.ldl_];
+            for(auto src_row=src_col; src_row!=row_end; ++src_row) {
+               int row = map[ *src_row ];
+               dest[row] += *(src++);
+            }
+         }
+         // If we reach this point, we have used all columns
+         return std::distance(row_start, row_end);
+      }
+   private:
+      Node<T> const& ancestor_;
+   };
 public:
    explicit Node(AssemblyTree::Node const& node, long loffset, int ldl)
    : node_(node), m_(node.get_nrow()), n_(node.get_ncol()), loffset_(loffset),
      ldl_(ldl)
    {}
+
+   template <typename anc_it_type>
+   void build_contribution_map(anc_it_type anc_begin, anc_it_type anc_end, int *map) {
+      if(m_ - n_ <= 0) return; // no contrib block => no map
+
+      auto row_start = std::next(node_.row_begin(), n_);
+      for(auto anc_itr = anc_begin; anc_itr != anc_end; ++anc_itr) {
+         contribution_map_.push_back( NodeToNodeMap(*anc_itr) );
+      }
+   }
 
    int get_parent_node_idx() const {
       return node_.get_parent_node().idx;
@@ -38,9 +81,7 @@ public:
       printf("\n");
    }
 
-   template <typename anc_it_type>
-   void factor(T const* aval, T* lval, anc_it_type anc_begin,
-         anc_it_type anc_end, WorkspaceManager &memhandler) const {
+   void factor(T const* aval, T* lval, WorkspaceManager &memhandler) const {
       /* Setup working pointers */
       T *ldiag = &lval[loffset_];
       T *lrect = &lval[loffset_ + n_];
@@ -72,8 +113,8 @@ public:
          /* Distribute elements of generated element to ancestors */
          auto row_start = std::next(node_.row_begin(), n_);
          const T* contrib_ptr = contrib;
-         for(auto anc_itr = anc_begin; anc_itr != anc_end; ++anc_itr) {
-            int used_cols = anc_itr->add_contribution(
+         for(auto n2n_map = contribution_map_.begin(); n2n_map != contribution_map_.end(); ++n2n_map) {
+            int used_cols = n2n_map->apply(
                   lval, row_start, node_.row_end(),
                   contrib_ptr, ldcontrib, map
                   );
@@ -150,29 +191,6 @@ public:
    }
 
 private:
-   /** Adds the contribution in contrib as per list (of rows).
-    *  Uses map as workspace.
-    *  \returns Number of columns found relevant. */
-   template <typename it_type>
-   int add_contribution(T *lval, it_type row_start, it_type row_end,
-         T const* contrib, int ldcontrib, int* map) const {
-      T *lptr = &lval[loffset_];
-      node_.construct_row_map(map);
-      for(auto src_col=row_start; src_col!=row_end; ++src_col) {
-         int cidx = std::distance(row_start, src_col);
-         if(! node_.contains_column(*src_col) )
-            return cidx; // Done: return #cols used
-         int col = map[ *src_col ]; // NB: Equal to *src_col - sptr[node]
-         T const* src = &contrib[cidx*(ldcontrib+1)]; // Start on diagonal
-         T *dest = &lptr[col * ldl_];
-         for(auto src_row=src_col; src_row!=row_end; ++src_row) {
-            int row = map[ *src_row ];
-            dest[row] += *(src++);
-         }
-      }
-      // If we reach this point, we have used all columns
-      return std::distance(row_start, row_end);
-   }
 
    /* Members */
    AssemblyTree::Node const& node_;
@@ -180,6 +198,7 @@ private:
    int const n_;
    long const loffset_;
    int const ldl_;
+   std::vector<NodeToNodeMap> contribution_map_;
 };
 
 } /* namespace ics */

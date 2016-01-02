@@ -9,12 +9,8 @@ NumericFactor::NumericFactor(const SymbolicFactor &sf, const T aval[])
 {
    WorkspaceManager memhandler(sf_.get_max_workspace_size());
    /* Iterate over chunks, factorizing */
-   for(auto node = sf_.node_begin(); node != sf_.node_end(); ++node) {
-      node->factor(
-            aval, lmem_.get_ptr(), sf_.get_ancestor_iterator(*node),
-            sf_.get_ancestor_iterator_root(), memhandler
-            );
-   }
+   for(auto node = sf_.node_begin(); node != sf_.node_end(); ++node)
+      node->factor(aval, lmem_.get_ptr(), memhandler);
 }
 
 void NumericFactor::solve(int nrhs, T x[], int ldx) const {

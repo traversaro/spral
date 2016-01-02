@@ -40,7 +40,24 @@ SymbolicFactor::SymbolicFactor (int n, int ptr[], int row[], int nemin)
    max_workspace_size_ = max_contrib_size*max_contrib_size*sizeof(double) +
       n_*sizeof(int);
 
-#if 1
+   /* Now we know where nodes are in memory, build map */
+   int *map = new int[n_];
+   for(auto node=nodes_.begin(); node!=nodes_.end(); ++node)
+      node->build_contribution_map(
+            get_ancestor_iterator(*node), get_ancestor_iterator_root(), map
+            );
+   delete[] map;
+
+#if 0
+   /* Construct list of chunks */
+   Chunker chunker(tree_);
+   for(auto node=tree_.begin(); node!=tree_.end(); ++node) {
+      printf("Node %d (%d x %d) in chunk %d\n", node->idx, node->get_nrow(),
+            node->get_ncol(), chunker[*node]);
+   }
+#endif
+
+#if 0
    /* Construct chunk buckets */
    const int MAXROW=50;
    const int MAXCOL=8;
