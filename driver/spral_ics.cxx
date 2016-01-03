@@ -13,6 +13,7 @@ float tdiff(const struct timespec &t1, const struct timespec &t2) {
 struct DriverOptions {
    bool print_matrix;
    bool print_factors;
+   bool force_posdef;
    int nemin;
 
    DriverOptions(int argc, char *const * argv) {
@@ -21,6 +22,7 @@ struct DriverOptions {
          ("help", "produce help message")
          ("print-matrix", "print input matrix")
          ("print-factors", "print numeric factors")
+         ("force-posdef", "randomly generate values for posdef matrix")
          ("nemin", boost::program_options::value<int>(&nemin)->default_value(8),
             "supernode amalgamation parameter")
          ;
@@ -37,6 +39,7 @@ struct DriverOptions {
       /* Set values that require present/not-present */
       print_matrix = ( vm.count("print-matrix") );
       print_factors = ( vm.count("print-factors") );
+      force_posdef = ( vm.count("force-posdef") );
 
       /* Feedback non-obvious settings to user */
       std::cout << "nemin = " << nemin << std::endl;
@@ -108,7 +111,7 @@ int main(int argc, char *const * argv) {
    printf("Reading...");
    struct spral_rb_options rb_options;
    spral_rb_default_options(&rb_options);
-   rb_options.values = 2; /* make up values if necessary */
+   if(options.force_posdef) rb_options.values = -3;
    void *read_handle;
    int m, n, *ptr, *row, *col, flag;
    double *val;
