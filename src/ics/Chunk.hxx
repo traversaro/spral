@@ -1,6 +1,7 @@
 #pragma once
 
 #include "SimdVec.hxx"
+#include "Node.hxx"
 
 namespace spral {
 namespace ics {
@@ -12,13 +13,17 @@ template <
    int NVEC, //< Number of vectors worth of source columns
    int MVEC  //< Number of vectors worth of source rows to handle at a time
    >
-class Chunk {
+class Chunk : public Factorizable<T> {
    static int const vector_length = SimdVec<T>::vector_length;
 public:
    Chunk(int m, int n, int loffset, int *aidx)
    : nnodes_(0), m_(m), n_(n), loffset_(loffset), ldl_(m*vector_length),
      aidx_(aidx)
    {}
+
+   void add_node(Node<double> &node) {
+      nodes_.push_back(&node);
+   }
 
    void add_col(int idx, int const* aidx) {
       idx_[nnodes_] = idx;
@@ -27,6 +32,12 @@ public:
       nnodes_++;
    }
 
+   void factor(T const* aval, T* lval, WorkspaceManager &memhandler) const {
+      for(auto node = nodes_.begin(); node != nodes_.end(); ++node)
+         (*node)->factor(aval, lval, memhandler);
+   }
+
+#if 0
    void factor(
          T const aval[],   //< Entries of A
          T lval[]          //< Entries of L
@@ -62,6 +73,9 @@ public:
          /* Update rest of node */
       }
    }
+#endif
+
+   int get_nnodes() const { return nnodes_; }
 
 private:
    int nnodes_;
@@ -71,6 +85,7 @@ private:
    int const loffset_; // Offset into lval of this node
    int const ldl_; // Leading dimension of lval
    int *aidx_; // Indices of aval to gather
+   std::vector<Node<double>*> nodes_;
 };
 
 } /* namespace ics */

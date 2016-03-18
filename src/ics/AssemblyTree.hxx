@@ -50,6 +50,10 @@ public:
       Node get_parent_node(void) const {
          return Node(tree_, tree_.sparent_[idx]);
       }
+      /** Returns true if node has a parent */
+      bool has_parent(void) const {
+         return (tree_.sparent_[idx] < tree_.nnodes_);
+      }
       /** Return first child node: descendants are exactly those nodes in range
        *  [first_child:idx-1] */
       Node get_first_child(void) const {

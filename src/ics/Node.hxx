@@ -82,6 +82,7 @@ public:
    }
 
    void factor(T const* aval, T* lval, WorkspaceManager &memhandler) const {
+      //printf("Factor %d: %dx%d\n", node_.idx, m_, n_);
       /* Setup working pointers */
       T *ldiag = &lval[loffset_];
       T *lrect = &lval[loffset_ + n_];

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <unordered_map>
+#include <queue>
 #include <vector>
 
 #include "AssemblyTree.hxx"
@@ -20,78 +21,86 @@ public:
    Chunker(AssemblyTree const& tree)
    : node_to_chunk_(tree.get_nnodes(), -1)
    {
-      /* Find depth for each node (distance from root) */
-      int maxdepth = 0;
-      std::vector<int> depth(tree.get_nnodes(), 0);
-      for(auto node=tree.rbegin(); node!=tree.rend(); ++node) {
-         int parent = node->get_parent_node().idx;
-         if(parent >= tree.get_nnodes()) continue; // No parent for roots
-         depth[node->idx] = depth[parent] + 1;
-         maxdepth = std::max(maxdepth, depth[node->idx]);
+      /* Find number of children for each node; build list of nodes with no
+       * children. */
+      std::vector<int> nchild(tree.get_nnodes(), 0);
+      std::queue<AssemblyTree::Node> ready;
+      for(auto node=tree.begin(); node!=tree.end(); ++node) {
+         if(node->has_parent())
+            nchild[node->get_parent_node().idx]++;
+         if(nchild[node->idx] == 0) ready.push(*node);
       }
 
-      /* Sort nodes into buckets based on their sizes */
-      std::unordered_multimap< Coord, AssemblyTree::Node, CoordHash > buckets;
-      for(auto node=tree.rbegin(); node!=tree.rend(); ++node)
-         buckets.emplace( get_coord(*node), *node );
-
-      /* Starting with largest buckets, try and fill out chunks */
-      int next_chunk=0;
-      for(int c=MAX_NCOL-1; c>=0; --c) {
-         for(int r=MAX_NROW-1; r>=0; --r) {
-            while(buckets.count( Coord(r,c) ) > 0) {
-               auto node = buckets.find( Coord(r, c) ); // Any will do!
-               std::vector<AssemblyTree::Node> chunk = gather_chunk(buckets, node);
-               for(auto i = chunk.begin(); i!=chunk.end(); ++i)
+      /* Loop over ready nodes adding them to chunks until we run out. */
+      std::unordered_map< Coord, std::vector<AssemblyTree::Node>, CoordHash > buckets;
+      auto check_itr = tree.leaf_first_begin();
+      int next_chunk = 0;
+      for(int nremain=tree.get_nnodes(); nremain>0; ) {
+         /* Whilst we have ready nodes, keep assigning them */
+         while(ready.size()) {
+            auto node = ready.front(); ready.pop();
+            auto& chunk = buckets[get_coord(node)];
+            chunk.push_back(node);
+            if(chunk.size() >= NUM_PER_CHUNK) {
+               // Chunk is ready
+               for(auto i=chunk.begin(); i!=chunk.end(); ++i) {
                   node_to_chunk_[i->idx] = next_chunk;
-               ++next_chunk;
+                  if(i->has_parent()) {
+                     auto parent = i->get_parent_node();
+                     if(--nchild[parent.idx] == 0)
+                        ready.push(parent);
+                  }
+                  nremain--;
+               }
+               chunks_.push_back(chunk);
+               next_chunk++;
+               buckets.erase(get_coord(node));
             }
          }
+         // FIXME: Try merging smaller nodes into bigger ones with large cols
+         //        before we start closing off tiny ones
+         /* If we run out, chase up from bottom of tree finding unassinged
+          * nodes and closing them */
+         // Find unallocated node
+         for(; node_to_chunk_[check_itr->idx]!=-1; ++check_itr);
+         if(check_itr==tree.leaf_first_end()) break;
+         // Close it out
+         auto& chunk = buckets[get_coord(*check_itr)];
+         for(auto i=chunk.begin(); i!=chunk.end(); ++i) {
+            node_to_chunk_[i->idx] = next_chunk;
+            if(i->has_parent()) {
+               auto parent = i->get_parent_node();
+               if(--nchild[parent.idx] == 0)
+                  ready.push(parent);
+            }
+            nremain--;
+         }
+         next_chunk++;
+         chunks_.push_back(chunk);
+         buckets.erase(get_coord(*check_itr));
       }
    }
 
    int operator[](AssemblyTree::Node const& node) const {
       return node_to_chunk_[node.idx];
    }
-
-private:
-   /** Given a first element, gather a chunk to fill it out. Update buckets
-    *  and node_to_chunk to refelect this. */
-   template<typename map_type>
-   std::vector<AssemblyTree::Node> gather_chunk(map_type &buckets, typename map_type::iterator first_node_itr) {
-      /* Init chunk membership list to supplied entry */
-      std::vector<AssemblyTree::Node> chunk;
-      chunk.push_back(first_node_itr->second);
-      int const rorig = first_node_itr->first.first;
-      int const c = first_node_itr->first.second;
-      buckets.erase(first_node_itr);
-      if(chunk.size() >= NUM_PER_CHUNK) return chunk;
-      
-      /* NB we can reduce #rows, but not #cols */
-      for(int r=rorig; r>=0; --r) {
-         auto range = buckets.equal_range( Coord(r, c) );
-         for(auto i=range.first; i!=range.second;) {
-            AssemblyTree::Node const& candidate = i->second;
-            // check if candidate is independent of rest of chunk
-            bool valid = true;
-            for(auto node=chunk.begin(); node!=chunk.end(); ++node) {
-               if(candidate.has_descendant(*node)) valid = false;
-               if(node->has_descendant(candidate)) valid = false;
-            }
-            if(valid) {
-               chunk.push_back(candidate);
-               i = buckets.erase(i);
-               if(chunk.size() >= NUM_PER_CHUNK) return chunk;
-            } else {
-               ++i; // NB: only increment if we've not erased [which increments]
-            }
-         }
-      }
-
-      /* Otherwise, return non-full chunk! */
-      return chunk;
+   int operator[](int idx) const {
+      return node_to_chunk_[idx];
    }
 
+   std::vector<AssemblyTree::Node> const& get_chunk(int idx) const {
+      return chunks_[idx];
+   }
+
+   std::vector< std::vector<AssemblyTree::Node> >::const_iterator begin() const {
+      return chunks_.begin();
+   }
+
+   std::vector< std::vector<AssemblyTree::Node> >::const_iterator end() const {
+      return chunks_.end();
+   }
+
+private:
    Coord get_coord(AssemblyTree::Node const& node) {
       return Coord(
          std::min( (node.get_nrow()-1) / ROW_CHUNK_SIZE, MAX_NROW ),
@@ -107,6 +116,7 @@ private:
    };
 
    std::vector<int> node_to_chunk_;
+   std::vector< std::vector<AssemblyTree::Node> > chunks_;
 };
 
 } /* namespace ics */

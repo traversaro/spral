@@ -40,6 +40,30 @@ SymbolicFactor::SymbolicFactor (int n, int ptr[], int row[], int nemin)
    max_workspace_size_ = max_contrib_size*max_contrib_size*sizeof(double) +
       n_*sizeof(int);
 
+#if 1
+   /* Construct list of chunks */
+   Chunker chunker(tree_);
+   /*for(auto node=tree_.begin(); node!=tree_.end(); ++node) {
+      printf("Node %d (%d x %d) in chunk %d\n", node->idx, node->get_nrow(),
+            node->get_ncol(), chunker[*node]);
+   }*/
+
+   /* Now we know where nodes are in memory, build map */
+   int *map = new int[n_];
+   for(auto node=nodes_.begin(); node!=nodes_.end(); ++node) {
+      node->build_contribution_map(
+            get_ancestor_iterator(*node), get_ancestor_iterator_root(), map
+            );
+   }
+   for(auto ci=chunker.begin(); ci!=chunker.end(); ++ci) {
+      for(auto n = ci->begin(); n!=ci->end(); ++n) {
+         chunks_.push_back(&(nodes_[n->idx]));
+      }
+   }
+   delete[] map;
+
+#else
+
    /* Now we know where nodes are in memory, build map */
    int *map = new int[n_];
    for(auto node=nodes_.begin(); node!=nodes_.end(); ++node) {
@@ -49,20 +73,12 @@ SymbolicFactor::SymbolicFactor (int n, int ptr[], int row[], int nemin)
       chunks_.push_back(&(*node));
    }
    delete[] map;
-
-#if 1
-   /* Construct list of chunks */
-   Chunker chunker(tree_);
-   for(auto node=tree_.begin(); node!=tree_.end(); ++node) {
-      printf("Node %d (%d x %d) in chunk %d\n", node->idx, node->get_nrow(),
-            node->get_ncol(), chunker[*node]);
-   }
 #endif
 
 #if 0
    /* Construct chunk buckets */
-   const int MAXROW=50;
-   const int MAXCOL=8;
+   const int MAXROW=16;
+   const int MAXCOL=16;
    int clen[MAXROW+1][MAXCOL+1];
    for(int i=0; i<MAXROW+1; i++)
    for(int j=0; j<MAXCOL+1; j++)
@@ -81,12 +97,23 @@ SymbolicFactor::SymbolicFactor (int n, int ptr[], int row[], int nemin)
    printf("Buckets:\n  ");
    for(int i=0; i<MAXCOL; i++) printf(" %4d", i+1);
    printf("   >%d\n", MAXCOL);
+   int nsmall=0, nthin=0, nwide=0, nbig=0;
    for(int i=0; i<MAXROW+1; i++) {
       printf("%2d", i+1);
-      for(int j=0; j<MAXCOL+1; j++)
+      for(int j=0; j<MAXCOL+1; j++) {
          printf(" %4d", clen[i][j]);
+         if(i<MAXROW && j<MAXCOL) nsmall+=clen[i][j];
+         if(i<MAXCOL && j==MAXCOL) nwide+=clen[i][j];
+         if(i==MAXCOL && j<MAXCOL) nthin+=clen[i][j];
+         if(i==MAXCOL && j==MAXCOL) nbig+=clen[i][j];
+
+      }
       printf("\n");
    }
+   printf("Total small = %d\n", nsmall);
+   printf("Total thin = %d\n", nwide);
+   printf("Total wide = %d\n", nthin);
+   printf("Total big = %d\n", nbig);
 #endif
 
 }
