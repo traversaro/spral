@@ -27,26 +27,34 @@ SymbolicFactor::SymbolicFactor (int n, int ptr[], int row[], int nemin)
    /* Construct AssemblyTree */
    tree_.construct_tree(ptr, row, perm_, nemin);
 
-   /* Construct list of nodes */
-   factor_mem_size_ = 0;
-   int max_contrib_size = 0;
-   for(auto node=tree_.begin(); node!=tree_.end(); ++node) {
-      int m = node->get_nrow();
-      int n = node->get_ncol();
-      nodes_.push_back(Node<double>(*node, factor_mem_size_, m));
-      factor_mem_size_ += m*((long) n);
-      max_contrib_size = std::max(max_contrib_size, m-n);
-   }
-   max_workspace_size_ = max_contrib_size*max_contrib_size*sizeof(double) +
-      n_*sizeof(int);
-
-#if 1
    /* Construct list of chunks */
    Chunker chunker(tree_);
    /*for(auto node=tree_.begin(); node!=tree_.end(); ++node) {
       printf("Node %d (%d x %d) in chunk %d\n", node->idx, node->get_nrow(),
             node->get_ncol(), chunker[*node]);
    }*/
+
+   /* Construct list of nodes */
+   int max_contrib_size = 0;
+   for(auto node=tree_.begin(); node!=tree_.end(); ++node) {
+      int m = node->get_nrow();
+      int n = node->get_ncol();
+      nodes_.push_back(Node<double>(*node));
+      max_contrib_size = std::max(max_contrib_size, m-n);
+   }
+   max_workspace_size_ = max_contrib_size*max_contrib_size*sizeof(double) +
+      n_*sizeof(int);
+
+   /* Assign memory locations so chunks are contigous */
+   factor_mem_size_ = 0;
+   for(auto ci=chunker.begin(); ci!=chunker.end(); ++ci) {
+      for(auto node = ci->begin(); node!=ci->end(); ++node) {
+         int m = node->get_nrow();
+         int n = node->get_ncol();
+         nodes_[node->idx].set_memloc(factor_mem_size_, m);
+         factor_mem_size_ += m*((long) n);
+      }
+   }
 
    /* Now we know where nodes are in memory, build map */
    int *map = new int[n_];
@@ -56,66 +64,15 @@ SymbolicFactor::SymbolicFactor (int n, int ptr[], int row[], int nemin)
             );
    }
    for(auto ci=chunker.begin(); ci!=chunker.end(); ++ci) {
-      for(auto n = ci->begin(); n!=ci->end(); ++n) {
-         chunks_.push_back(&(nodes_[n->idx]));
+      if(ci->size() == 1) {
+         chunks_.push_back(&(nodes_[ci->front().idx]));
+      } else {
+         for(auto n = ci->begin(); n!=ci->end(); ++n) {
+            chunks_.push_back(&(nodes_[n->idx]));
+         }
       }
    }
    delete[] map;
-
-#else
-
-   /* Now we know where nodes are in memory, build map */
-   int *map = new int[n_];
-   for(auto node=nodes_.begin(); node!=nodes_.end(); ++node) {
-      node->build_contribution_map(
-            get_ancestor_iterator(*node), get_ancestor_iterator_root(), map
-            );
-      chunks_.push_back(&(*node));
-   }
-   delete[] map;
-#endif
-
-#if 0
-   /* Construct chunk buckets */
-   const int MAXROW=16;
-   const int MAXCOL=16;
-   int clen[MAXROW+1][MAXCOL+1];
-   for(int i=0; i<MAXROW+1; i++)
-   for(int j=0; j<MAXCOL+1; j++)
-      clen[i][j] = 0;
-   for(auto nitr=tree_.leaf_first_begin(); nitr!=tree_.leaf_first_end(); ++nitr) {
-
-      const AssemblyTree::Node node = *nitr;
-      int i = (node.get_nrow()-1)/4;
-      if(i>MAXROW) i = MAXROW;
-      int j = node.get_ncol()-1;
-      if(j>MAXCOL) j = MAXCOL;
-      if(i==MAXROW || j==MAXCOL)
-         printf("Node %d is %d x %d\n", node.idx, node.get_nrow(), node.get_ncol());
-      clen[i][j]++;
-   }
-   printf("Buckets:\n  ");
-   for(int i=0; i<MAXCOL; i++) printf(" %4d", i+1);
-   printf("   >%d\n", MAXCOL);
-   int nsmall=0, nthin=0, nwide=0, nbig=0;
-   for(int i=0; i<MAXROW+1; i++) {
-      printf("%2d", i+1);
-      for(int j=0; j<MAXCOL+1; j++) {
-         printf(" %4d", clen[i][j]);
-         if(i<MAXROW && j<MAXCOL) nsmall+=clen[i][j];
-         if(i<MAXCOL && j==MAXCOL) nwide+=clen[i][j];
-         if(i==MAXCOL && j<MAXCOL) nthin+=clen[i][j];
-         if(i==MAXCOL && j==MAXCOL) nbig+=clen[i][j];
-
-      }
-      printf("\n");
-   }
-   printf("Total small = %d\n", nsmall);
-   printf("Total thin = %d\n", nwide);
-   printf("Total wide = %d\n", nthin);
-   printf("Total big = %d\n", nbig);
-#endif
-
 }
 
 } /* namespace ics */

@@ -47,10 +47,15 @@ class Node : public Factorizable<T> {
       Node<T> const& ancestor_;
    };
 public:
-   explicit Node(AssemblyTree::Node const& node, long loffset, int ldl)
-   : node_(node), m_(node.get_nrow()), n_(node.get_ncol()), loffset_(loffset),
-     ldl_(ldl)
+   explicit Node(AssemblyTree::Node const& node)
+   : node_(node), m_(node.get_nrow()), n_(node.get_ncol()), loffset_(0),
+     ldl_(0)
    {}
+
+   void set_memloc(long loffset, int ldl) {
+      loffset_ = loffset;
+      ldl_ = ldl;
+   }
 
    template <typename anc_it_type>
    void build_contribution_map(anc_it_type anc_begin, anc_it_type anc_end, int *map) {
@@ -197,8 +202,8 @@ private:
    AssemblyTree::Node const& node_;
    int const m_;
    int const n_;
-   long const loffset_;
-   int const ldl_;
+   long loffset_;
+   int ldl_;
    std::vector<NodeToNodeMap> contribution_map_;
 };
 
