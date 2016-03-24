@@ -47,10 +47,9 @@ public:
       void build_contribution_map() {
          if(!has_parent()) return; // no parent, no map
 
-         sn_->build_contribution_map(
-               sf_.get_ancestor_iterator(*sn_),
-               sf_.get_ancestor_iterator_root()
-               );
+         auto anc_end = sf_.get_ancestor_iterator_root();
+         for(auto anc_itr = sf_.get_ancestor_iterator(*sn_); anc_itr != anc_end; ++anc_itr)
+            sn_->build_contribution_map(*anc_itr);
       }
 
    private:
