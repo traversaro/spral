@@ -8,9 +8,20 @@ NumericFactor::NumericFactor(const SymbolicFactor &sf, const T aval[])
 : sf_(sf), lmem_(sf.get_factor_mem_size())
 {
    WorkspaceManager memhandler(sf_.get_max_workspace_size());
+   std::vector<int> child_complete(sf_.get_nchunks(), 0);
    /* Iterate over chunks, factorizing */
-   for(auto chunk = sf_.chunk_begin(); chunk != sf_.chunk_end(); ++chunk)
-      (*chunk)->factor(aval, lmem_.get_ptr(), memhandler);
+   for(auto ci = sf_.chunk_begin(); ci != sf_.chunk_end(); ++ci) {
+      auto const& chunk = *(*ci);
+      if(chunk.get_nchild() == 0) {
+         chunk.factor(aval, lmem_.get_ptr(), memhandler);
+         /*if(chunk.has_parent()) {
+            auto const& parent = chunk.get_parent();
+            child_complete[parent.get_idx()]++;
+            if(child_complete[parent.get_idx()] != parent.get_nchild())
+               printf("Ready to run %d\n", parent.get_idx());
+         }*/
+      }
+   }
 }
 
 void NumericFactor::solve(int nrhs, T x[], int ldx) const {

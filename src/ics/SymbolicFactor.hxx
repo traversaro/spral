@@ -31,7 +31,7 @@ public:
 
       void increment() {
          if(!node_) return; // Can't increment a root, so don't try
-         int parent = node_->get_parent_node_idx();
+         int parent = node_->get_parent_idx();
          if(parent >= sfact_.get_nnodes()) {
             node_ = nullptr;
             return;
@@ -107,6 +107,7 @@ public:
    int get_n() const { return n_; }
    int get_nnodes() const { return tree_.get_nnodes(); }
    int const* get_perm() const { return perm_; }
+   int get_nchunks() const { return chunks_.size(); }
 
 private:
    /* Core data */

@@ -53,6 +53,8 @@ SymbolicFactor::SymbolicFactor (int n, int ptr[], int row[], int nemin)
          int n = node->get_ncol();
          nodes_[node->idx].set_memloc(factor_mem_size_, m);
          factor_mem_size_ += m*((long) n);
+         if(node->has_parent())
+            nodes_[node->get_parent_node().idx].add_child();
       }
    }
 
