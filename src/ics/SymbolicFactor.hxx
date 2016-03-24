@@ -14,8 +14,8 @@ public:
 
    class Chunk {
    public:
-      Chunk(SingleNode<T> *sn)
-      : sn_(sn)
+      Chunk(SymbolicFactor const& sf, SingleNode<T> *sn)
+      : sf_(sf), sn_(sn)
       {}
 
       /** Return number of child chunks */
@@ -43,7 +43,18 @@ public:
          sn_->factor(aval, lval, memhandler);
       }
 
+      /** Build contribution map */
+      void build_contribution_map() {
+         if(!has_parent()) return; // no parent, no map
+
+         sn_->build_contribution_map(
+               sf_.get_ancestor_iterator(*sn_),
+               sf_.get_ancestor_iterator_root()
+               );
+      }
+
    private:
+      SymbolicFactor const& sf_;
       SingleNode<T> *sn_;
    };
 

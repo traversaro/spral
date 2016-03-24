@@ -3,7 +3,6 @@
 #include <stdexcept>
 
 #include "AssemblyTree.hxx"
-#include "Chunk.hxx"
 #include "Chunker.hxx"
 #include "spral_metis_wrapper.h"
 
@@ -59,22 +58,17 @@ SymbolicFactor::SymbolicFactor (int n, int ptr[], int row[], int nemin)
    }
 
    /* Now we know where nodes are in memory, build map */
-   int *map = new int[n_];
-   for(auto node=nodes_.begin(); node!=nodes_.end(); ++node) {
-      node->build_contribution_map(
-            get_ancestor_iterator(*node), get_ancestor_iterator_root(), map
-            );
-   }
    for(auto ci=chunker.begin(); ci!=chunker.end(); ++ci) {
       if(ci->size() == 1) {
-         chunks_.push_back(&(nodes_[ci->front().idx]));
+         chunks_.push_back(Chunk(*this, &(nodes_[ci->front().idx])));
       } else {
          for(auto n = ci->begin(); n!=ci->end(); ++n) {
-            chunks_.push_back(&(nodes_[n->idx]));
+            chunks_.push_back(Chunk(*this, &(nodes_[n->idx])));
          }
       }
    }
-   delete[] map;
+   for(auto chunk=chunks_.begin(); chunk!=chunks_.end(); ++chunk)
+      chunk->build_contribution_map();
 }
 
 } /* namespace ics */

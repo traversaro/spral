@@ -71,9 +71,7 @@ public:
    }
 
    template <typename anc_it_type>
-   void build_contribution_map(anc_it_type anc_begin, anc_it_type anc_end, int *map) {
-      if(m_ - n_ <= 0) return; // no contrib block => no map
-
+   void build_contribution_map(anc_it_type anc_begin, anc_it_type anc_end) {
       for(auto anc_itr = anc_begin; anc_itr != anc_end; ++anc_itr) {
          contribution_map_.push_back( NodeToNodeMap<T>(*anc_itr) );
       }
