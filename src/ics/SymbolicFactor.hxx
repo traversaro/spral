@@ -3,26 +3,61 @@
 #include <cstdlib>
 
 #include "AssemblyTree.hxx"
-#include "Node.hxx"
+#include "SingleNode.hxx"
 
 namespace spral {
 namespace ics {
 
 class SymbolicFactor {
    typedef double T;
-
 public:
+
+   class Chunk {
+   public:
+      Chunk(SingleNode<T> *sn)
+      : sn_(sn)
+      {}
+
+      /** Return number of child chunks */
+      int get_nchild() const {
+         return sn_->get_nchild();
+      }
+
+      /** Return true if this chunk has a parent */
+      bool has_parent() const {
+         return sn_->has_parent();
+      }
+
+      /** Get chunk index of parent */
+      int get_parent_idx() const {
+         return sn_->get_parent_idx();
+      }
+
+      /** Get chunk index of this node */
+      int get_idx() const {
+         return sn_->get_idx();
+      }
+
+      /** Factorize all nodes in this chunk */
+      void factor(T const* aval, T* lval, WorkspaceManager &memhandler) const {
+         sn_->factor(aval, lval, memhandler);
+      }
+
+   private:
+      SingleNode<T> *sn_;
+   };
+
    class ancestor_iterator
    : public boost::iterator_facade<
      ancestor_iterator,
-     Node<T> const,
+     SingleNode<T> const,
      boost::forward_traversal_tag
      >
    {
    public:
       explicit ancestor_iterator(
          SymbolicFactor const& sfact,
-         Node<T> const* node
+         SingleNode<T> const* node
          )
       : sfact_(sfact), node_(node)
       {}
@@ -41,12 +76,12 @@ public:
       bool equal(ancestor_iterator const& other) const {
          return (node_ == other.node_);
       }
-      Node<T> const& dereference() const {
+      SingleNode<T> const& dereference() const {
          return *node_;
       }
 
       SymbolicFactor const& sfact_;
-      Node<T> const* node_;
+      SingleNode<T> const* node_;
    };
 
    /** Performs a symbolic factorization as part of the construction */
@@ -66,34 +101,34 @@ public:
    }
 
    /** Returns iterator to beginning of node list (in assembly tree order) */
-   std::vector< Node<T> >::const_iterator node_begin(void) const {
+   std::vector< SingleNode<T> >::const_iterator node_begin(void) const {
       return nodes_.cbegin();
    }
    /** Returns iterator to end of node list (in assembly tree order) */
-   std::vector< Node<T> >::const_iterator node_end(void) const {
+   std::vector< SingleNode<T> >::const_iterator node_end(void) const {
       return nodes_.cend();
    }
 
    /** Returns iterator to beginning of chunk list */
-   std::vector< Factorizable<T>* >::const_iterator chunk_begin(void) const {
+   std::vector< Chunk >::const_iterator chunk_begin(void) const {
       return chunks_.cbegin();
    }
    /** Returns iterator to end of chunk list */
-   std::vector< Factorizable<T>* >::const_iterator chunk_end(void) const {
+   std::vector< Chunk >::const_iterator chunk_end(void) const {
       return chunks_.cend();
    }
 
    /** Returns iterator to reverse beginning of node list (in assembly tree order) */
-   std::vector< Node<T> >::const_reverse_iterator node_rbegin(void) const {
+   std::vector< SingleNode<T> >::const_reverse_iterator node_rbegin(void) const {
       return nodes_.crbegin();
    }
    /** Returns iterator to reverse end of node list (in assembly tree order) */
-   std::vector< Node<T> >::const_reverse_iterator node_rend(void) const {
+   std::vector< SingleNode<T> >::const_reverse_iterator node_rend(void) const {
       return nodes_.crend();
    }
 
    /** Returns iterator to node's ancestors (starts at parent) */
-   ancestor_iterator get_ancestor_iterator(Node<T> const& node) const {
+   ancestor_iterator get_ancestor_iterator(SingleNode<T> const& node) const {
       return std::next(ancestor_iterator(*this, &node), 1);
    }
    ancestor_iterator get_ancestor_iterator_root() const {
@@ -116,8 +151,8 @@ private:
    long factor_mem_size_;
    long max_workspace_size_;
    AssemblyTree tree_;
-   std::vector< Node<T> > nodes_;
-   std::vector< Factorizable<T>* > chunks_;
+   std::vector< SingleNode<T> > nodes_;
+   std::vector< Chunk > chunks_;
 
 };
 

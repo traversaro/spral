@@ -54,12 +54,11 @@ libspral_a_SOURCES += \
 	src/ics/blas_templates.cxx \
 	src/ics/Chunk.hxx \
 	src/ics/Chunker.hxx \
-	src/ics/Factorizable.hxx \
 	src/ics/ICSExceptions.hxx \
-	src/ics/Node.hxx \
 	src/ics/NumericFactor.cxx \
 	src/ics/NumericFactor.hxx \
 	src/ics/SimdVec.hxx \
+	src/ics/SingleNode.hxx \
 	src/ics/SymbolicFactor.cxx \
 	src/ics/SymbolicFactor.hxx \
 	src/ics/WorkspaceManager.hxx

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "SimdVec.hxx"
-#include "Node.hxx"
+#include "SingleNode.hxx"
 
 namespace spral {
 namespace ics {
@@ -13,7 +13,7 @@ template <
    int NVEC, //< Number of vectors worth of source columns
    int MVEC  //< Number of vectors worth of source rows to handle at a time
    >
-class Chunk : public Factorizable<T> {
+class Chunk {
    static int const vector_length = SimdVec<T>::vector_length;
 public:
    Chunk(int m, int n, int loffset, int *aidx)
@@ -21,7 +21,7 @@ public:
      aidx_(aidx)
    {}
 
-   void add_node(Node<double> &node) {
+   void add_node(SingleNode<double> &node) {
       nodes_.push_back(&node);
    }
 
@@ -85,7 +85,7 @@ private:
    int const loffset_; // Offset into lval of this node
    int const ldl_; // Leading dimension of lval
    int *aidx_; // Indices of aval to gather
-   std::vector<Node<double>*> nodes_;
+   std::vector<SingleNode<double>*> nodes_;
 };
 
 } /* namespace ics */

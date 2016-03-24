@@ -39,7 +39,7 @@ SymbolicFactor::SymbolicFactor (int n, int ptr[], int row[], int nemin)
    for(auto node=tree_.begin(); node!=tree_.end(); ++node) {
       int m = node->get_nrow();
       int n = node->get_ncol();
-      nodes_.push_back(Node<double>(*node));
+      nodes_.push_back(SingleNode<double>(*node));
       max_contrib_size = std::max(max_contrib_size, m-n);
    }
    max_workspace_size_ = max_contrib_size*max_contrib_size*sizeof(double) +

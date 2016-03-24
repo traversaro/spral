@@ -3,7 +3,6 @@
 #include "blas_templates.hxx"
 
 #include "AssemblyTree.hxx"
-#include "Factorizable.hxx"
 #include "ICSExceptions.hxx"
 #include "SimdVec.hxx"
 #include "WorkspaceManager.hxx"
@@ -12,42 +11,49 @@ namespace spral {
 namespace ics {
 
 template <typename T>
-class Node : public Factorizable<T> {
-   class NodeToNodeMap {
-      public:
-      NodeToNodeMap(Node<T> const& ancestor)
-      : ancestor_(ancestor)
-      {
-      }
+class SingleNode;
 
-      /** Adds the contribution in contrib as per list (of rows).
-       *  Uses map as workspace.
-       *  \returns Number of columns found relevant. */
-      template <typename it_type>
-      int apply(T *lval, it_type row_start, it_type row_end,
-            T const* contrib, int ldcontrib, int* map) const {
-         T *lptr = &lval[ancestor_.loffset_];
-         ancestor_.node_.construct_row_map(map);
-         for(auto src_col=row_start; src_col!=row_end; ++src_col) {
-            int cidx = std::distance(row_start, src_col);
-            if(! ancestor_.node_.contains_column(*src_col) )
-               return cidx; // Done: return #cols used
-            int col = map[ *src_col ]; // NB: Equal to *src_col - sptr[node]
-            T const* src = &contrib[cidx*(ldcontrib+1)]; // Start on diagonal
-            T *dest = &lptr[col * ancestor_.ldl_];
-            for(auto src_row=src_col; src_row!=row_end; ++src_row) {
-               int row = map[ *src_row ];
-               dest[row] += *(src++);
-            }
-         }
-         // If we reach this point, we have used all columns
-         return std::distance(row_start, row_end);
-      }
-   private:
-      Node<T> const& ancestor_;
-   };
+template <typename T>
+class NodeToNodeMap {
 public:
-   explicit Node(AssemblyTree::Node const& node)
+   NodeToNodeMap(SingleNode<T> const& ancestor)
+   : ancestor_(ancestor)
+   {
+   }
+
+   /** Adds the contribution in contrib as per list (of rows).
+    *  Uses map as workspace.
+    *  \returns Number of columns found relevant. */
+   template <typename it_type>
+   int apply(T *lval, it_type row_start, it_type row_end,
+         T const* contrib, int ldcontrib, int* map) const {
+      T *lptr = &lval[ancestor_.loffset_];
+      ancestor_.node_.construct_row_map(map);
+      for(auto src_col=row_start; src_col!=row_end; ++src_col) {
+         int cidx = std::distance(row_start, src_col);
+         if(! ancestor_.node_.contains_column(*src_col) )
+            return cidx; // Done: return #cols used
+         int col = map[ *src_col ]; // NB: Equal to *src_col - sptr[node]
+         T const* src = &contrib[cidx*(ldcontrib+1)]; // Start on diagonal
+         T *dest = &lptr[col * ancestor_.ldl_];
+         for(auto src_row=src_col; src_row!=row_end; ++src_row) {
+            int row = map[ *src_row ];
+            dest[row] += *(src++);
+         }
+      }
+      // If we reach this point, we have used all columns
+      return std::distance(row_start, row_end);
+   }
+private:
+   SingleNode<T> const& ancestor_;
+};
+
+template <typename T>
+class SingleNode {
+   friend class NodeToNodeMap<T>;
+
+public:
+   explicit SingleNode(AssemblyTree::Node const& node)
    : node_(node), m_(node.get_nrow()), n_(node.get_ncol()), loffset_(0),
      ldl_(0), nchild_(0)
    {}
@@ -69,7 +75,7 @@ public:
       if(m_ - n_ <= 0) return; // no contrib block => no map
 
       for(auto anc_itr = anc_begin; anc_itr != anc_end; ++anc_itr) {
-         contribution_map_.push_back( NodeToNodeMap(*anc_itr) );
+         contribution_map_.push_back( NodeToNodeMap<T>(*anc_itr) );
       }
    }
 
@@ -215,7 +221,7 @@ private:
    long loffset_;
    int ldl_;
    int nchild_;
-   std::vector<NodeToNodeMap> contribution_map_;
+   std::vector< NodeToNodeMap<T> > contribution_map_;
 };
 
 } /* namespace ics */
