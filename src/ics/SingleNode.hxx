@@ -14,34 +14,38 @@ template <typename T>
 class SingleNode {
    class NodeToNodeMap {
    public:
-      NodeToNodeMap(SingleNode<T> const& ancestor)
-      : ancestor_(ancestor)
+      NodeToNodeMap(SingleNode<T> const& ancestor, int const* row_start, int const* row_end, int offset)
+      : ancestor_(ancestor), row_start_(row_start), row_end_(row_end), offset_(offset)
       {}
 
       /** Adds the contribution in contrib as per list (of rows).
        *  Uses map as workspace.
        *  \returns Number of columns found relevant. */
-      template <typename it_type>
-      int apply(T *lval, it_type row_start, it_type row_end,
-            T const* contrib, int ldcontrib, int* map) const {
+      int apply(T *lval, T const* contrib, int ldcontrib, int* map) const {
          T *lptr = &lval[ancestor_.loffset_];
          ancestor_.node_.construct_row_map(map);
-         for(auto src_col=row_start; src_col!=row_end; ++src_col) {
-            int cidx = std::distance(row_start, src_col);
+         for(auto src_col=row_start_; src_col!=row_end_; ++src_col) {
+            int cidx = std::distance(row_start_, src_col);
             if(! ancestor_.node_.contains_column(*src_col) )
                return cidx; // Done: return #cols used
             int col = map[ *src_col ]; // NB: Equal to *src_col - sptr[node]
             T const* src = &contrib[cidx*(ldcontrib+1)]; // Start on diagonal
             T *dest = &lptr[col * ancestor_.ldl_];
-            for(auto src_row=src_col; src_row!=row_end; ++src_row) {
+            for(auto src_row=src_col; src_row!=row_end_; ++src_row) {
                int row = map[ *src_row ];
                dest[row] += *(src++);
             }
          }
          // If we reach this point, we have used all columns
-         return std::distance(row_start, row_end);
+         return std::distance(row_start_, row_end_);
       }
+
+      /** Return offset into node index list (i.e. how many rows to skip) */
+      int get_offset() const { return offset_; }
    private:
+      int const* row_start_;
+      int const* row_end_;
+      int offset_;
       SingleNode<T> const& ancestor_;
    };
 
@@ -65,8 +69,16 @@ public:
 
    /** Builds a contribution map. Perform no-op if not an actual ancestor. */
    void build_contribution_map(SingleNode<T> const& ancestor) {
-      if(ancestor.is_ancestor_of(*this))
-         contribution_map_.push_back( NodeToNodeMap(ancestor) );
+      if(ancestor.is_ancestor_of(*this)) {
+         int afirst = *(ancestor.node_.row_begin());
+         auto row_start = std::next(node_.row_begin(), n_);
+         for(; *row_start < afirst && row_start!=node_.row_end(); ++row_start);
+         if(!ancestor.node_.contains_column(*row_start)) return; // no upd
+         int offset = std::distance(node_.row_begin(), row_start) - n_;
+         contribution_map_.push_back(
+               NodeToNodeMap(ancestor, row_start, node_.row_end(), offset)
+               );
+      }
    }
 
    bool has_parent() const {
@@ -127,15 +139,9 @@ public:
                ldcontrib);
 
          /* Distribute elements of generated element to ancestors */
-         auto row_start = std::next(node_.row_begin(), n_);
-         const T* contrib_ptr = contrib;
          for(auto n2n_map = contribution_map_.begin(); n2n_map != contribution_map_.end(); ++n2n_map) {
-            int used_cols = n2n_map->apply(
-                  lval, row_start, node_.row_end(),
-                  contrib_ptr, ldcontrib, map
-                  );
-            std::advance(row_start, used_cols);
-            contrib_ptr += used_cols*(ldcontrib+1); // Advance to diagonal entry
+            const T* contrib_ptr = contrib + n2n_map->get_offset()*(ldcontrib+1);
+            n2n_map->apply(lval, contrib_ptr, ldcontrib, map);
          }
 
          /* Release workspace */
