@@ -46,11 +46,6 @@ public:
          return (parents_.size() > 0);
       }
 
-      /** Return reference to parent Chunk */
-      Chunk const& get_parent() const {
-         return *parents_.front();
-      }
-
       /** Factorize all nodes in this chunk */
       void factor(T const* aval, T* lval, WorkspaceManager &memhandler) const {
          if(sn_)
