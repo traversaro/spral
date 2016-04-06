@@ -12,7 +12,13 @@ namespace ics {
 
 template <typename T>
 class SingleNode {
-   class NodeToNodeMap {
+   /** Virtual base class for NodeToNodeMap and NodeToChunkMap */
+   class MapBase {
+   public:
+      virtual
+      int apply(T *lval, T const* contrib, int ldcontrib, int* map) const=0;
+   };
+   class NodeToNodeMap: public MapBase {
    public:
       NodeToNodeMap(SingleNode<T> const& ancestor, int const* row_start, int const* row_end, int offset)
       : ancestor_(ancestor), row_start_(row_start), row_end_(row_end), offset_(offset)
@@ -22,6 +28,7 @@ class SingleNode {
        *  Uses map as workspace.
        *  \returns Number of columns found relevant. */
       int apply(T *lval, T const* contrib, int ldcontrib, int* map) const {
+         contrib += offset_*(ldcontrib+1);
          T *lptr = &lval[ancestor_.loffset_];
          ancestor_.node_.construct_row_map(map);
          for(auto src_col=row_start_; src_col!=row_end_; ++src_col) {
@@ -45,7 +52,7 @@ class SingleNode {
    private:
       int const* row_start_;
       int const* row_end_;
-      int offset_;
+      long offset_;
       SingleNode<T> const& ancestor_;
    };
 
@@ -54,6 +61,10 @@ public:
    : node_(node), m_(node.get_nrow()), n_(node.get_ncol()), loffset_(0),
      ldl_(0)
    {}
+   ~SingleNode() {
+      for(auto cmap : contribution_map_)
+         delete cmap;
+   }
 
    void set_memloc(long loffset, int ldl) {
       loffset_ = loffset;
@@ -69,7 +80,7 @@ public:
          if(!ancestor.node_.contains_column(*row_start)) return; // no upd
          int offset = std::distance(node_.row_begin(), row_start) - n_;
          contribution_map_.push_back(
-               NodeToNodeMap(ancestor, row_start, node_.row_end(), offset)
+               new NodeToNodeMap(ancestor, row_start, node_.row_end(), offset)
                );
       }
    }
@@ -133,8 +144,7 @@ public:
 
          /* Distribute elements of generated element to ancestors */
          for(auto n2n_map = contribution_map_.begin(); n2n_map != contribution_map_.end(); ++n2n_map) {
-            const T* contrib_ptr = contrib + n2n_map->get_offset()*(ldcontrib+1);
-            n2n_map->apply(lval, contrib_ptr, ldcontrib, map);
+            (*n2n_map)->apply(lval, contrib, ldcontrib, map);
          }
 
          /* Release workspace */
@@ -209,7 +219,7 @@ private:
    int const n_;
    long loffset_;
    int ldl_;
-   std::vector< NodeToNodeMap > contribution_map_;
+   std::vector< MapBase* > contribution_map_;
 };
 
 } /* namespace ics */
