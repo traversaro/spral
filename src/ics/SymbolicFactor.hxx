@@ -1,9 +1,10 @@
 #pragma once
 
-#include <cstdlib>
-
 #include "AssemblyTree.hxx"
 #include "SingleNode.hxx"
+#include "MultiNode.hxx"
+
+#include <cstdlib>
 
 namespace spral {
 namespace ics {
@@ -33,14 +34,26 @@ public:
        *  Sets max_work_size to maximum size of workspace required. */
       template <typename node_itr>
       void setup(node_itr const& nbegin, node_itr const& nend, long &loffset, long &max_work_size) {
-         max_work_size = 0;
-         for(auto node=nbegin; node!=nend; ++node) {
-            int m = node->get_nrow();
-            long n = node->get_ncol();
-            SingleNode<T> *sn = emplace_node(*node);
-            sn->set_memloc(loffset, m);
+         if(std::distance(nbegin, nend)==1) {
+            // Single node
+            auto& node = *nbegin;
+            int m = node.get_nrow();
+            long n = node.get_ncol();
+            sn_ = new SingleNode<T>(node);
+            sn_->set_memloc(loffset, m);
             loffset += m*n;
-            max_work_size = std::max(max_work_size, (m-n)*(m-n));
+            max_work_size = (m-n)*(m-n);
+         } else {
+            // Multiple node
+            max_work_size = 0;
+            for(auto node=nbegin; node!=nend; ++node) {
+               int m = node->get_nrow();
+               long n = node->get_ncol();
+               SingleNode<T> *sn = emplace_node(*node);
+               sn->set_memloc(loffset, m);
+               loffset += m*n;
+               max_work_size = std::max(max_work_size, (m-n)*(m-n));
+            }
          }
       }
 
@@ -170,6 +183,7 @@ public:
       std::vector<Chunk *> parents_;
       std::vector<Chunk *> children_;
       SingleNode<T> *sn_;
+      MultiNode<T> *mn_;
       std::vector<SingleNode<T>*> nodes_;
    };
 
