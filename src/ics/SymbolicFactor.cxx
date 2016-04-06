@@ -30,38 +30,25 @@ SymbolicFactor::SymbolicFactor (int n, int ptr[], int row[], int nemin)
    Chunker chunker(tree_);
 
    /* Construct chunks */
+   chunks_.reserve(chunker.get_nchunks());
    for(auto ci=chunker.begin(); ci!=chunker.end(); ++ci) {
       chunks_.emplace_back(*this);
    }
-
-   /* Construct list of nodes */
    int max_contrib_size = 0;
-   for(auto ci=chunker.begin(); ci!=chunker.end(); ++ci) {
+   factor_mem_size_ = 0;
+   int idx=0;
+   for(auto ci=chunker.begin(); ci!=chunker.end(); ++ci, ++idx) {
       for(auto node = ci->begin(); node!=ci->end(); ++node) {
          int m = node->get_nrow();
          int n = node->get_ncol();
-         nodes_.push_back(SingleNode<double>(*node));
+         SingleNode<T> *sn = chunks_[idx].emplace_node(*node);
          max_contrib_size = std::max(max_contrib_size, m-n);
+         sn->set_memloc(factor_mem_size_, m);
+         factor_mem_size_ += m*((long) n);
       }
    }
    max_workspace_size_ = max_contrib_size*max_contrib_size*sizeof(double) +
       n_*sizeof(int);
-
-   /* Assign memory locations so chunks are contigous */
-   factor_mem_size_ = 0;
-   int idx=0, nidx=0;
-   for(auto ci=chunker.begin(); ci!=chunker.end(); ++ci, ++idx) {
-      for(auto node = ci->begin(); node!=ci->end(); ++node, ++nidx) {
-         int m = node->get_nrow();
-         int n = node->get_ncol();
-         if(nodes_[nidx].get_idx() != node->idx) {
-            printf("WTF?\n");
-         }
-         nodes_[nidx].set_memloc(factor_mem_size_, m);
-         chunks_[idx].add_node(&nodes_[nidx]);
-         factor_mem_size_ += m*((long) n);
-      }
-   }
 
    /* Build parent/child relations between chunks */
    std::vector<int> seen(chunks_.size(), -1);

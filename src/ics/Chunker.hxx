@@ -100,6 +100,8 @@ public:
       return chunks_.end();
    }
 
+   int get_nchunks() const { return chunks_.size(); }
+
 private:
    Coord get_coord(AssemblyTree::Node const& node) {
       return Coord(

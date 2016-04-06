@@ -19,6 +19,22 @@ public:
       : sf_(sf), sn_(nullptr)
       {}
 
+      /** Destructor */
+      ~Chunk() {
+         if(sn_) {
+            delete sn_;
+         } else {
+            for(auto node=nodes_.begin(); node!=nodes_.end(); ++node)
+               delete (*node);
+         }
+      }
+
+      SingleNode<T>* emplace_node(AssemblyTree::Node const& node) {
+         SingleNode<T> *sn = new SingleNode<T>(node);
+         add_node(sn);
+         return sn;
+      }
+
       /** Add a node to the chunk */
       void add_node(SingleNode<T> *sn) {
          if(nodes_.size() > 0) {
@@ -193,7 +209,6 @@ private:
    long factor_mem_size_;
    long max_workspace_size_;
    AssemblyTree tree_;
-   std::vector< SingleNode<T> > nodes_;
    std::vector< Chunk > chunks_;
 };
 
