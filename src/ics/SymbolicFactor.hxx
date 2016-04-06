@@ -41,7 +41,6 @@ public:
             max_work_size = (m-n)*(m-n);
          } else {
             // Multiple node
-            max_work_size = 0;
             mn_ = new MultiNode<T>(nbegin, nend, loffset, max_work_size);
          }
       }
@@ -63,8 +62,7 @@ public:
          if(sn_)
             sn_->factor(aval, lval, memhandler);
          else
-            for(auto node : mn_->nodes_)
-               node->factor(aval, lval, memhandler);
+            mn_->factor(aval, lval, memhandler);
       }
 
       /** Perform forward solve for all nodes in this chunk */
@@ -73,8 +71,7 @@ public:
          if(sn_)
             sn_->forward_solve(nrhs, x, ldx, lval, memhandler);
          else
-            for(auto node : mn_->nodes_)
-               node->forward_solve(nrhs, x, ldx, lval, memhandler);
+            mn_->forward_solve(nrhs, x, ldx, lval, memhandler);
       }
 
       /** Perform backwards solve for all nodes in this chunk */
@@ -83,8 +80,7 @@ public:
          if(sn_)
             sn_->backward_solve(nrhs, x, ldx, lval, memhandler);
          else
-            for(auto node : mn_->nodes_)
-               node->backward_solve(nrhs, x, ldx, lval, memhandler);
+            mn_->backward_solve(nrhs, x, ldx, lval, memhandler);
       }
 
       /** Print the data in this chunk */
@@ -93,8 +89,7 @@ public:
          if(sn_)
             sn_->print(lval);
          else
-            for(auto node : mn_->nodes_)
-               node->print(lval);
+            mn_->print(lval);
       }
 
       /** Build contribution map */
@@ -105,7 +100,7 @@ public:
          std::vector<Chunk const*> stack;
          /* Initialise stack with direct parents */
          for(auto pchunk=parents_.begin(); pchunk!=parents_.end(); ++pchunk) {
-            int pfn = (*pchunk)->sn_ ? (*pchunk)->sn_->get_idx() : (*pchunk)->mn_->nodes_.front()->get_idx();
+            int pfn = (*pchunk)->sn_ ? (*pchunk)->sn_->get_idx() : (*pchunk)->mn_->get_idx();
             seen[pfn] = true;
             stack.push_back(*pchunk);
          }
@@ -113,9 +108,9 @@ public:
          while(stack.size()) {
             auto chunk = stack.back(); stack.pop_back();
             /* Add parents to stack */
-            int first_node = chunk->sn_ ? chunk->sn_->get_idx() : chunk->mn_->nodes_.front()->get_idx();
+            int first_node = chunk->sn_ ? chunk->sn_->get_idx() : chunk->mn_->get_idx();
             for(auto pchunk=chunk->parents_.begin(); pchunk!=chunk->parents_.end(); ++pchunk) {
-               int pfn = (*pchunk)->sn_ ? (*pchunk)->sn_->get_idx() : (*pchunk)->mn_->nodes_.front()->get_idx();
+               int pfn = (*pchunk)->sn_ ? (*pchunk)->sn_->get_idx() : (*pchunk)->mn_->get_idx();
                if(!seen[pfn]) {
                   seen[pfn] = true;
                   stack.push_back(*pchunk);
@@ -125,7 +120,7 @@ public:
             if(sn_) {
                if(chunk->sn_) {
                   // Both this chunk and ancestor are single nodes
-                  sn_->build_contribution_map(*chunk->sn_);
+                  sn_->build_contribution_map(*(chunk->sn_));
                } else {
                   // This chunk is a single node, ancestor is multi
                   sn_->build_contribution_map(chunk->mn_->nodes_);
@@ -133,12 +128,10 @@ public:
             } else {
                if(chunk->sn_) {
                   // This chunk is multi but ancestor is single node
-                  for(auto node : mn_->nodes_)
-                     node->build_contribution_map(*(chunk->sn_));
+                  mn_->build_contribution_map(*(chunk->sn_));
                } else {
                   // Both this chunk and ancestor are multi
-                  for(auto node : mn_->nodes_)
-                     node->build_contribution_map(chunk->mn_->nodes_);
+                  mn_->build_contribution_map(*(chunk->mn_));
                }
             }
          }

@@ -124,7 +124,8 @@ public:
    int get_parent_idx() const {
       return node_.get_parent_node().idx;
    }
-   int get_idx(void) const {
+   /** Return a representative index in range [0,nnodes-1] */
+   int get_idx() const {
       return node_.idx;
    }
 
