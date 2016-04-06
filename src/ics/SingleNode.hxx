@@ -52,19 +52,12 @@ class SingleNode {
 public:
    explicit SingleNode(AssemblyTree::Node const& node)
    : node_(node), m_(node.get_nrow()), n_(node.get_ncol()), loffset_(0),
-     ldl_(0), nchild_(0)
+     ldl_(0)
    {}
 
    void set_memloc(long loffset, int ldl) {
       loffset_ = loffset;
       ldl_ = ldl;
-   }
-
-   void add_child() {
-      ++nchild_;
-   }
-   int get_nchild() const {
-      return nchild_;
    }
 
    /** Builds a contribution map. Perform no-op if not an actual ancestor. */
@@ -216,7 +209,6 @@ private:
    int const n_;
    long loffset_;
    int ldl_;
-   int nchild_;
    std::vector< NodeToNodeMap > contribution_map_;
 };
 
