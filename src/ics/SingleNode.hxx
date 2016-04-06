@@ -204,7 +204,7 @@ public:
 private:
 
    /* Members */
-   AssemblyTree::Node const& node_;
+   AssemblyTree::Node const node_;
    int const m_;
    int const n_;
    long loffset_;
