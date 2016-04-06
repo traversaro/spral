@@ -26,71 +26,59 @@ SymbolicFactor::SymbolicFactor (int n, int ptr[], int row[], int nemin)
    /* Construct AssemblyTree */
    tree_.construct_tree(ptr, row, perm_, nemin);
 
-   /* Construct list of chunks */
+   /* Find assignment of nodes to chunks */
    Chunker chunker(tree_);
-   /*for(auto node=tree_.begin(); node!=tree_.end(); ++node) {
-      printf("Node %d (%d x %d) in chunk %d\n", node->idx, node->get_nrow(),
-            node->get_ncol(), chunker[*node]);
-   }*/
+
+   /* Construct chunks */
+   for(auto ci=chunker.begin(); ci!=chunker.end(); ++ci) {
+      chunks_.emplace_back(*this);
+   }
 
    /* Construct list of nodes */
    int max_contrib_size = 0;
-   for(auto node=tree_.begin(); node!=tree_.end(); ++node) {
-      int m = node->get_nrow();
-      int n = node->get_ncol();
-      nodes_.push_back(SingleNode<double>(*node));
-      max_contrib_size = std::max(max_contrib_size, m-n);
+   for(auto ci=chunker.begin(); ci!=chunker.end(); ++ci) {
+      for(auto node = ci->begin(); node!=ci->end(); ++node) {
+         int m = node->get_nrow();
+         int n = node->get_ncol();
+         nodes_.push_back(SingleNode<double>(*node));
+         max_contrib_size = std::max(max_contrib_size, m-n);
+      }
    }
    max_workspace_size_ = max_contrib_size*max_contrib_size*sizeof(double) +
       n_*sizeof(int);
 
    /* Assign memory locations so chunks are contigous */
    factor_mem_size_ = 0;
-   for(auto ci=chunker.begin(); ci!=chunker.end(); ++ci) {
-      for(auto node = ci->begin(); node!=ci->end(); ++node) {
+   int idx=0, nidx=0;
+   for(auto ci=chunker.begin(); ci!=chunker.end(); ++ci, ++idx) {
+      for(auto node = ci->begin(); node!=ci->end(); ++node, ++nidx) {
          int m = node->get_nrow();
          int n = node->get_ncol();
-         nodes_[node->idx].set_memloc(factor_mem_size_, m);
+         if(nodes_[nidx].get_idx() != node->idx) {
+            printf("WTF?\n");
+         }
+         nodes_[nidx].set_memloc(factor_mem_size_, m);
+         chunks_[idx].add_node(&nodes_[nidx]);
          factor_mem_size_ += m*((long) n);
       }
    }
 
-   /* Now we know where nodes are in memory, build map */
-   std::vector<int> node_to_chunk(tree_.get_nnodes(), -1);
-   for(auto ci=chunker.begin(); ci!=chunker.end(); ++ci) {
-      if(ci->size() == 1) {
-         chunks_.emplace_back(*this);
-         chunks_.back().add_node(&(nodes_[ci->front().idx]));
-         node_to_chunk[ci->front().idx] = chunks_.size()-1;
-      } else {
-         chunks_.emplace_back(*this);
-         for(auto n = ci->begin(); n!=ci->end(); ++n) {
-            chunks_.back().add_node(&(nodes_[n->idx]));
-            node_to_chunk[n->idx] = chunks_.size()-1;
-         }
-      }
-   }
-
-   for(auto node=tree_.begin(); node!=tree_.end(); ++node) {
-      if(node_to_chunk[node->idx] != chunker[node->idx])
-         printf("hmm %d %d\n", node_to_chunk[node->idx], chunker[node->idx]);
-   }
-
    /* Build parent/child relations between chunks */
    std::vector<int> seen(chunks_.size(), -1);
-   int idx=0;
+   idx=0;
    for(auto chunk=chunker.begin(); chunk!=chunker.end(); ++chunk, ++idx) {
       for(auto node = chunk->begin(); node!=chunk->end(); ++node) {
          if(!node->has_parent()) continue; // is a root
-         int parent = node_to_chunk[node->get_parent_node().idx];
+         int parent = chunker[node->get_parent_node().idx];
          if(seen[parent] >= idx) continue; // Already handled
          seen[parent] = idx;
          add_relation(chunks_[idx], chunks_[parent]);
       }
    }
 
+   /* Now we know where chunks are in memory and their relation, build map */
    for(auto chunk=chunks_.begin(); chunk!=chunks_.end(); ++chunk)
-      chunk->build_contribution_map(nodes_.size());
+      chunk->build_contribution_map(tree_.get_nnodes());
 }
 
 } /* namespace ics */
