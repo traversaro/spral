@@ -138,9 +138,7 @@ public:
       }
    }
 
-   template <typename anc_it_type>
    void forward_solve(int nrhs, T* x, int ldx, T const* lval,
-         anc_it_type anc_begin, anc_it_type anc_end,
          WorkspaceManager &memhandler) const {
       /* Perform solve with diagonal block */
       T const* ldiag = &lval[loffset_];
@@ -168,9 +166,7 @@ public:
       }
    }
 
-   template <typename anc_it_type>
    void backward_solve(int nrhs, T* x, int ldx, T const* lval,
-         anc_it_type anc_begin, anc_it_type anc_end,
          WorkspaceManager &memhandler) const {
       /* Establish useful pointers */
       T const* ldiag = &lval[loffset_];

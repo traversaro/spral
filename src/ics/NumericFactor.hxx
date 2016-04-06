@@ -36,8 +36,8 @@ public:
 
    /** Prints numeric factors supernode by supernode */
    void print() const {
-      for(auto node=sf_.node_begin(); node!=sf_.node_end(); ++node)
-         node->print(lmem_.get_ptr());
+      for(auto chunk = sf_.chunk_begin(); chunk != sf_.chunk_end(); ++chunk)
+         chunk->print(lmem_.get_ptr());
    }
 
 private:

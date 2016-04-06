@@ -56,11 +56,10 @@ void NumericFactor::permute_rhs_from_elim(int nrhs, T const xperm[],
 
 void NumericFactor::forward_solve(int nrhs, T x[], int ldx) const {
    WorkspaceManager memhandler(nrhs*sf_.get_n()*sizeof(double));
-   /* Iterate over node forward, doing forward solve  */
-   for(auto node = sf_.node_begin(); node != sf_.node_end(); ++node) {
-      node->forward_solve(
-            nrhs, x, ldx, lmem_.get_ptr(), sf_.get_ancestor_iterator(*node),
-            sf_.get_ancestor_iterator_root(), memhandler
+   /* Iterate over chunks forward, doing forward solve  */
+   for(auto chunk = sf_.chunk_begin(); chunk != sf_.chunk_end(); ++chunk) {
+      chunk->forward_solve(
+            nrhs, x, ldx, lmem_.get_ptr(), memhandler
             );
    }
 }
@@ -68,10 +67,9 @@ void NumericFactor::forward_solve(int nrhs, T x[], int ldx) const {
 void NumericFactor::backward_solve(int nrhs, T x[], int ldx) const {
    WorkspaceManager memhandler(nrhs*sf_.get_n()*sizeof(double));
    /* Iterate over nodes backwards, doing backward solve */
-   for(auto node = sf_.node_rbegin(); node != sf_.node_rend(); ++node) {
-      node->backward_solve(
-            nrhs, x, ldx, lmem_.get_ptr(), sf_.get_ancestor_iterator(*node),
-            sf_.get_ancestor_iterator_root(), memhandler
+   for(auto chunk = sf_.chunk_rbegin(); chunk != sf_.chunk_rend(); ++chunk) {
+      chunk->backward_solve(
+            nrhs, x, ldx, lmem_.get_ptr(), memhandler
             );
    }
 }

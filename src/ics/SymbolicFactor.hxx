@@ -18,19 +18,20 @@ public:
       : sf_(sf), sn_(sn)
       {}
 
-      /** Return number of child chunks */
-      int get_nchild() const {
-         return sn_->get_nchild();
+      friend
+      void add_relation(Chunk &child, Chunk &parent) {
+         child.parents_.push_back(&parent);
+         parent.children_.push_back(&child);
       }
 
       /** Return true if this chunk has a parent */
       bool has_parent() const {
-         return sn_->has_parent();
+         return (parents_.size() > 0);
       }
 
-      /** Get chunk index of parent */
-      int get_parent_idx() const {
-         return sn_->get_parent_idx();
+      /** Return reference to parent Chunk */
+      Chunk const& get_parent() const {
+         return *parents_.front();
       }
 
       /** Get chunk index of this node */
@@ -43,17 +44,46 @@ public:
          sn_->factor(aval, lval, memhandler);
       }
 
+      void forward_solve(int nrhs, T* x, int ldx, T const* lval,
+            WorkspaceManager &memhandler) const {
+         sn_->forward_solve(nrhs, x, ldx, lval, memhandler);
+      }
+
+      void backward_solve(int nrhs, T* x, int ldx, T const* lval,
+            WorkspaceManager &memhandler) const {
+         sn_->backward_solve(nrhs, x, ldx, lval, memhandler);
+      }
+
+      void print(T const* lval) const {
+         printf("CHUNK %d\n", get_idx());
+         sn_->print(lval);
+      }
+
       /** Build contribution map */
       void build_contribution_map() {
          if(!has_parent()) return; // no parent, no map
 
+         Chunk const* parent = &get_parent();
          auto anc_end = sf_.get_ancestor_iterator_root();
-         for(auto anc_itr = sf_.get_ancestor_iterator(*sn_); anc_itr != anc_end; ++anc_itr)
+         for(auto anc_itr = sf_.get_ancestor_iterator(*sn_); anc_itr != anc_end; ++anc_itr) {
             sn_->build_contribution_map(*anc_itr);
+            if(parent->has_parent()) {
+               parent = &parent->get_parent();
+            }
+         }
+      }
+
+      SingleNode<T> const* node_begin() {
+         return sn_;
+      }
+      SingleNode<T> const* node_end() {
+         return sn_+1;
       }
 
    private:
       SymbolicFactor const& sf_;
+      std::vector<Chunk *> parents_;
+      std::vector<Chunk *> children_;
       SingleNode<T> *sn_;
    };
 
@@ -110,15 +140,6 @@ public:
       return max_workspace_size_;
    }
 
-   /** Returns iterator to beginning of node list (in assembly tree order) */
-   std::vector< SingleNode<T> >::const_iterator node_begin(void) const {
-      return nodes_.cbegin();
-   }
-   /** Returns iterator to end of node list (in assembly tree order) */
-   std::vector< SingleNode<T> >::const_iterator node_end(void) const {
-      return nodes_.cend();
-   }
-
    /** Returns iterator to beginning of chunk list */
    std::vector< Chunk >::const_iterator chunk_begin(void) const {
       return chunks_.cbegin();
@@ -128,13 +149,13 @@ public:
       return chunks_.cend();
    }
 
-   /** Returns iterator to reverse beginning of node list (in assembly tree order) */
-   std::vector< SingleNode<T> >::const_reverse_iterator node_rbegin(void) const {
-      return nodes_.crbegin();
+   /** Returns iterator to reverse beginning of chunk list */
+   std::vector< Chunk >::const_reverse_iterator chunk_rbegin(void) const {
+      return chunks_.crbegin();
    }
-   /** Returns iterator to reverse end of node list (in assembly tree order) */
-   std::vector< SingleNode<T> >::const_reverse_iterator node_rend(void) const {
-      return nodes_.crend();
+   /** Returns iterator to reverse end of chunk list */
+   std::vector< Chunk >::const_reverse_iterator chunk_rend(void) const {
+      return chunks_.crend();
    }
 
    /** Returns iterator to node's ancestors (starts at parent) */

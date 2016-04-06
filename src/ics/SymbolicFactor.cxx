@@ -58,15 +58,36 @@ SymbolicFactor::SymbolicFactor (int n, int ptr[], int row[], int nemin)
    }
 
    /* Now we know where nodes are in memory, build map */
+   std::vector<int> node_to_chunk(tree_.get_nnodes(), -1);
    for(auto ci=chunker.begin(); ci!=chunker.end(); ++ci) {
       if(ci->size() == 1) {
          chunks_.push_back(Chunk(*this, &(nodes_[ci->front().idx])));
+         node_to_chunk[ci->front().idx] = chunks_.size()-1;
       } else {
          for(auto n = ci->begin(); n!=ci->end(); ++n) {
             chunks_.push_back(Chunk(*this, &(nodes_[n->idx])));
+            node_to_chunk[n->idx] = chunks_.size()-1;
          }
       }
    }
+
+   /* Build parent/child relations between chunks */
+   std::vector<int> seen(chunks_.size(), -1);
+   int idx=0;
+   for(auto chunk=chunks_.begin(); chunk!=chunks_.end(); ++chunk, ++idx) {
+      for(auto node=chunk->node_begin(); node!=chunk->node_end(); ++node) {
+         if(!node->has_parent()) continue; // is a root
+         int parent = node_to_chunk[node->get_parent_idx()];
+         if(seen[parent] >= idx) continue; // Already handled
+         add_relation(*chunk, chunks_[parent]);
+      }
+   }
+
+   for(auto node=tree_.begin(); node!=tree_.end(); ++node) {
+      if(node_to_chunk[node->idx] != chunker[node->idx])
+         printf("hmm %d %d\n", node_to_chunk[node->idx], chunker[node->idx]);
+   }
+
    for(auto chunk=chunks_.begin(); chunk!=chunks_.end(); ++chunk)
       chunk->build_contribution_map();
 }
