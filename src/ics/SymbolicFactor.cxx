@@ -65,23 +65,11 @@ SymbolicFactor::SymbolicFactor (int n, int ptr[], int row[], int nemin)
          chunks_.back().add_node(&(nodes_[ci->front().idx]));
          node_to_chunk[ci->front().idx] = chunks_.size()-1;
       } else {
+         chunks_.emplace_back(*this);
          for(auto n = ci->begin(); n!=ci->end(); ++n) {
-            chunks_.emplace_back(*this);
             chunks_.back().add_node(&(nodes_[n->idx]));
             node_to_chunk[n->idx] = chunks_.size()-1;
          }
-      }
-   }
-
-   /* Build parent/child relations between chunks */
-   std::vector<int> seen(chunks_.size(), -1);
-   int idx=0;
-   for(auto chunk=chunker.begin(); chunk!=chunker.end(); ++chunk) {
-      for(auto node = chunk->begin(); node!=chunk->end(); ++node, ++idx) {
-         if(!node->has_parent()) continue; // is a root
-         int parent = node_to_chunk[node->get_parent_node().idx];
-         if(seen[parent] >= idx) continue; // Already handled
-         add_relation(chunks_[idx], chunks_[parent]);
       }
    }
 
@@ -90,8 +78,21 @@ SymbolicFactor::SymbolicFactor (int n, int ptr[], int row[], int nemin)
          printf("hmm %d %d\n", node_to_chunk[node->idx], chunker[node->idx]);
    }
 
+   /* Build parent/child relations between chunks */
+   std::vector<int> seen(chunks_.size(), -1);
+   int idx=0;
+   for(auto chunk=chunker.begin(); chunk!=chunker.end(); ++chunk, ++idx) {
+      for(auto node = chunk->begin(); node!=chunk->end(); ++node) {
+         if(!node->has_parent()) continue; // is a root
+         int parent = node_to_chunk[node->get_parent_node().idx];
+         if(seen[parent] >= idx) continue; // Already handled
+         seen[parent] = idx;
+         add_relation(chunks_[idx], chunks_[parent]);
+      }
+   }
+
    for(auto chunk=chunks_.begin(); chunk!=chunks_.end(); ++chunk)
-      chunk->build_contribution_map();
+      chunk->build_contribution_map(nodes_.size());
 }
 
 } /* namespace ics */

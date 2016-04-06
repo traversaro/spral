@@ -86,17 +86,26 @@ public:
       }
 
       /** Build contribution map */
-      void build_contribution_map() {
+      void build_contribution_map(int nnodes) {
          if(!has_parent()) return; // no parent, no map
 
+         std::vector<int> seen(nnodes, false);
          std::vector<Chunk const*> stack;
-         for(auto pchunk=parents_.begin(); pchunk!=parents_.end(); ++pchunk)
+         for(auto pchunk=parents_.begin(); pchunk!=parents_.end(); ++pchunk) {
+            int pfn = (*pchunk)->sn_ ? (*pchunk)->sn_->get_idx() : (*pchunk)->nodes_.front()->get_idx();
+            seen[pfn] = true;
             stack.push_back(*pchunk);
+         }
          
          while(stack.size()) {
             auto chunk = stack.back(); stack.pop_back();
+            int first_node = chunk->sn_ ? chunk->sn_->get_idx() : chunk->nodes_.front()->get_idx();
             for(auto pchunk=chunk->parents_.begin(); pchunk!=chunk->parents_.end(); ++pchunk) {
-               stack.push_back(*pchunk);
+               int pfn = (*pchunk)->sn_ ? (*pchunk)->sn_->get_idx() : (*pchunk)->nodes_.front()->get_idx();
+               if(!seen[pfn]) {
+                  seen[pfn] = true;
+                  stack.push_back(*pchunk);
+               }
             }
             if(sn_) {
                if(chunk->sn_) {
