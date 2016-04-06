@@ -34,20 +34,13 @@ SymbolicFactor::SymbolicFactor (int n, int ptr[], int row[], int nemin)
    for(auto ci=chunker.begin(); ci!=chunker.end(); ++ci) {
       chunks_.emplace_back(*this);
    }
-   int max_contrib_size = 0;
-   factor_mem_size_ = 0;
    int idx=0;
    for(auto ci=chunker.begin(); ci!=chunker.end(); ++ci, ++idx) {
-      for(auto node = ci->begin(); node!=ci->end(); ++node) {
-         int m = node->get_nrow();
-         int n = node->get_ncol();
-         SingleNode<T> *sn = chunks_[idx].emplace_node(*node);
-         max_contrib_size = std::max(max_contrib_size, m-n);
-         sn->set_memloc(factor_mem_size_, m);
-         factor_mem_size_ += m*((long) n);
-      }
+      long sz;
+      chunks_[idx].setup(ci->begin(), ci->end(), factor_mem_size_, sz);
+      max_workspace_size_ = std::max(max_workspace_size_, sz);
    }
-   max_workspace_size_ = max_contrib_size*max_contrib_size*sizeof(double) +
+   max_workspace_size_ = max_workspace_size_*sizeof(double) +
       n_*sizeof(int);
 
    /* Build parent/child relations between chunks */

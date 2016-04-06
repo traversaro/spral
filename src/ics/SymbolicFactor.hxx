@@ -29,6 +29,21 @@ public:
          }
       }
 
+      /** Setup a chunk. Increments loffset by amount of memory used.
+       *  Sets max_work_size to maximum size of workspace required. */
+      template <typename node_itr>
+      void setup(node_itr const& nbegin, node_itr const& nend, long &loffset, long &max_work_size) {
+         max_work_size = 0;
+         for(auto node=nbegin; node!=nend; ++node) {
+            int m = node->get_nrow();
+            long n = node->get_ncol();
+            SingleNode<T> *sn = emplace_node(*node);
+            sn->set_memloc(loffset, m);
+            loffset += m*n;
+            max_work_size = std::max(max_work_size, (m-n)*(m-n));
+         }
+      }
+
       SingleNode<T>* emplace_node(AssemblyTree::Node const& node) {
          SingleNode<T> *sn = new SingleNode<T>(node);
          add_node(sn);
