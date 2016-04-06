@@ -14,10 +14,27 @@ public:
 
    class Chunk {
    public:
-      Chunk(SymbolicFactor const& sf, SingleNode<T> *sn)
-      : sf_(sf), sn_(sn)
+      /** Constructor */
+      Chunk(SymbolicFactor const& sf)
+      : sf_(sf), sn_(nullptr)
       {}
 
+      /** Add a node to the chunk */
+      void add_node(SingleNode<T> *sn) {
+         if(nodes_.size() > 0) {
+            nodes_.push_back(sn);
+         }
+         else if(sn_) {
+            nodes_.push_back(sn_);
+            sn_ = nullptr;
+            nodes_.push_back(sn);
+         }
+         else {
+            sn_ = sn;
+         }
+      }
+
+      /** Adds parent/child relation between chunks */
       friend
       void add_relation(Chunk &child, Chunk &parent) {
          child.parents_.push_back(&parent);
@@ -34,50 +51,84 @@ public:
          return *parents_.front();
       }
 
-      /** Get chunk index of this node */
-      int get_idx() const {
-         return sn_->get_idx();
-      }
-
       /** Factorize all nodes in this chunk */
       void factor(T const* aval, T* lval, WorkspaceManager &memhandler) const {
-         sn_->factor(aval, lval, memhandler);
+         if(sn_)
+            sn_->factor(aval, lval, memhandler);
+         else
+            for(auto node=nodes_.begin(); node<nodes_.end(); ++node)
+               (*node)->factor(aval, lval, memhandler);
       }
 
+      /** Perform forward solve for all nodes in this chunk */
       void forward_solve(int nrhs, T* x, int ldx, T const* lval,
             WorkspaceManager &memhandler) const {
-         sn_->forward_solve(nrhs, x, ldx, lval, memhandler);
+         if(sn_)
+            sn_->forward_solve(nrhs, x, ldx, lval, memhandler);
+         else
+            for(auto node=nodes_.begin(); node<nodes_.end(); ++node)
+               (*node)->forward_solve(nrhs, x, ldx, lval, memhandler);
       }
 
+      /** Perform backwards solve for all nodes in this chunk */
       void backward_solve(int nrhs, T* x, int ldx, T const* lval,
             WorkspaceManager &memhandler) const {
-         sn_->backward_solve(nrhs, x, ldx, lval, memhandler);
+         if(sn_)
+            sn_->backward_solve(nrhs, x, ldx, lval, memhandler);
+         else
+            for(auto node=nodes_.begin(); node<nodes_.end(); ++node)
+               (*node)->backward_solve(nrhs, x, ldx, lval, memhandler);
       }
 
+      /** Print the data in this chunk */
       void print(T const* lval) const {
-         printf("CHUNK %d\n", get_idx());
-         sn_->print(lval);
+         printf("CHUNK\n");
+         if(sn_)
+            sn_->print(lval);
+         else
+            for(auto node=nodes_.begin(); node<nodes_.end(); ++node)
+               (*node)->print(lval);
       }
 
       /** Build contribution map */
       void build_contribution_map() {
          if(!has_parent()) return; // no parent, no map
 
-         Chunk const* parent = &get_parent();
-         auto anc_end = sf_.get_ancestor_iterator_root();
-         for(auto anc_itr = sf_.get_ancestor_iterator(*sn_); anc_itr != anc_end; ++anc_itr) {
-            sn_->build_contribution_map(*anc_itr);
-            if(parent->has_parent()) {
-               parent = &parent->get_parent();
+         std::vector<Chunk const*> stack;
+         for(auto pchunk=parents_.begin(); pchunk!=parents_.end(); ++pchunk)
+            stack.push_back(*pchunk);
+         
+         while(stack.size()) {
+            auto chunk = stack.back(); stack.pop_back();
+            for(auto pchunk=chunk->parents_.begin(); pchunk!=chunk->parents_.end(); ++pchunk) {
+               stack.push_back(*pchunk);
+            }
+            if(sn_) {
+               if(chunk->sn_) {
+                  // Both this chunk and ancestor are single nodes
+                  sn_->build_contribution_map(*chunk->sn_);
+               } else {
+                  // This chunk is a single node, ancestor is multi
+                  for(auto pnode=chunk->nodes_.begin(); pnode!=chunk->nodes_.end(); ++pnode) {
+                     sn_->build_contribution_map(**pnode);
+                  }
+               }
+            } else {
+               if(chunk->sn_) {
+                  // This chunk is multi but ancestor is single node
+                  for(auto node=nodes_.begin(); node!=nodes_.end(); ++node) {
+                     (*node)->build_contribution_map(*(chunk->sn_));
+                  }
+               } else {
+                  // Both this chunk and ancestor are multi
+                  for(auto node=nodes_.begin(); node!=nodes_.end(); ++node) {
+                     for(auto pnode=chunk->nodes_.begin(); pnode!=chunk->nodes_.end(); ++pnode) {
+                        (*node)->build_contribution_map(**pnode);
+                     }
+                  }
+               }
             }
          }
-      }
-
-      SingleNode<T> const* node_begin() {
-         return sn_;
-      }
-      SingleNode<T> const* node_end() {
-         return sn_+1;
       }
 
    private:
@@ -85,43 +136,7 @@ public:
       std::vector<Chunk *> parents_;
       std::vector<Chunk *> children_;
       SingleNode<T> *sn_;
-   };
-
-   class ancestor_iterator
-   : public boost::iterator_facade<
-     ancestor_iterator,
-     SingleNode<T> const,
-     boost::forward_traversal_tag
-     >
-   {
-   public:
-      explicit ancestor_iterator(
-         SymbolicFactor const& sfact,
-         SingleNode<T> const* node
-         )
-      : sfact_(sfact), node_(node)
-      {}
-   private:
-      friend class boost::iterator_core_access;
-
-      void increment() {
-         if(!node_) return; // Can't increment a root, so don't try
-         int parent = node_->get_parent_idx();
-         if(parent >= sfact_.get_nnodes()) {
-            node_ = nullptr;
-            return;
-         }
-         node_ = &sfact_.nodes_[parent];
-      }
-      bool equal(ancestor_iterator const& other) const {
-         return (node_ == other.node_);
-      }
-      SingleNode<T> const& dereference() const {
-         return *node_;
-      }
-
-      SymbolicFactor const& sfact_;
-      SingleNode<T> const* node_;
+      std::vector<SingleNode<T>*> nodes_;
    };
 
    /** Performs a symbolic factorization as part of the construction */
@@ -158,14 +173,6 @@ public:
       return chunks_.crend();
    }
 
-   /** Returns iterator to node's ancestors (starts at parent) */
-   ancestor_iterator get_ancestor_iterator(SingleNode<T> const& node) const {
-      return std::next(ancestor_iterator(*this, &node), 1);
-   }
-   ancestor_iterator get_ancestor_iterator_root() const {
-      return ancestor_iterator(*this, nullptr);
-   }
-
    /* Information */
    const int nemin;
    long get_nfact() const { return tree_.get_nfact(); }
@@ -184,7 +191,6 @@ private:
    AssemblyTree tree_;
    std::vector< SingleNode<T> > nodes_;
    std::vector< Chunk > chunks_;
-
 };
 
 } /* namespace ics */

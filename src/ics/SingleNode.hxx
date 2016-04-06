@@ -63,8 +63,10 @@ public:
       return nchild_;
    }
 
+   /** Builds a contribution map. Perform no-op if not an actual ancestor. */
    void build_contribution_map(SingleNode<T> const& ancestor) {
-      contribution_map_.push_back( NodeToNodeMap(ancestor) );
+      if(ancestor.is_ancestor_of(*this))
+         contribution_map_.push_back( NodeToNodeMap(ancestor) );
    }
 
    bool has_parent() const {
@@ -75,6 +77,10 @@ public:
    }
    int get_idx(void) const {
       return node_.idx;
+   }
+
+   bool is_ancestor_of(SingleNode<T> const& node) const {
+      return node_.has_descendant(node.node_);
    }
 
    void print(T const*lval) const {
