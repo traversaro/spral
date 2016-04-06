@@ -120,8 +120,9 @@ public:
       void build_contribution_map(int nnodes) {
          if(!has_parent()) return; // no parent, no map
 
-         std::vector<int> seen(nnodes, false);
+         std::vector<bool> seen(nnodes, false);
          std::vector<Chunk const*> stack;
+         /* Initialise stack with direct parents */
          for(auto pchunk=parents_.begin(); pchunk!=parents_.end(); ++pchunk) {
             int pfn = (*pchunk)->sn_ ? (*pchunk)->sn_->get_idx() : (*pchunk)->nodes_.front()->get_idx();
             seen[pfn] = true;
@@ -130,6 +131,7 @@ public:
          
          while(stack.size()) {
             auto chunk = stack.back(); stack.pop_back();
+            /* Add parents to stack */
             int first_node = chunk->sn_ ? chunk->sn_->get_idx() : chunk->nodes_.front()->get_idx();
             for(auto pchunk=chunk->parents_.begin(); pchunk!=chunk->parents_.end(); ++pchunk) {
                int pfn = (*pchunk)->sn_ ? (*pchunk)->sn_->get_idx() : (*pchunk)->nodes_.front()->get_idx();
@@ -138,15 +140,14 @@ public:
                   stack.push_back(*pchunk);
                }
             }
+            /* Actually build contribution */
             if(sn_) {
                if(chunk->sn_) {
                   // Both this chunk and ancestor are single nodes
                   sn_->build_contribution_map(*chunk->sn_);
                } else {
                   // This chunk is a single node, ancestor is multi
-                  for(auto pnode=chunk->nodes_.begin(); pnode!=chunk->nodes_.end(); ++pnode) {
-                     sn_->build_contribution_map(**pnode);
-                  }
+                  sn_->build_contribution_map(chunk->nodes_);
                }
             } else {
                if(chunk->sn_) {
@@ -157,9 +158,7 @@ public:
                } else {
                   // Both this chunk and ancestor are multi
                   for(auto node=nodes_.begin(); node!=nodes_.end(); ++node) {
-                     for(auto pnode=chunk->nodes_.begin(); pnode!=chunk->nodes_.end(); ++pnode) {
-                        (*node)->build_contribution_map(**pnode);
-                     }
+                     (*node)->build_contribution_map(chunk->nodes_);
                   }
                }
             }

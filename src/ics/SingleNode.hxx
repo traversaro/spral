@@ -55,6 +55,31 @@ class SingleNode {
       long offset_;
       SingleNode<T> const& ancestor_;
    };
+   template <typename U>
+   class NodeToMultiMap: public MapBase {
+   public:
+      NodeToMultiMap(U const& ancestor_nodes, SingleNode const &from) {
+         for(auto anode : ancestor_nodes) {
+            if(!anode->is_ancestor_of(from)) continue;
+            int afirst = *(anode->node_.row_begin());
+            auto row_start = std::next(from.node_.row_begin(), from.n_);
+            for(; *row_start < afirst && row_start!=from.node_.row_end(); ++row_start);
+            if(!anode->node_.contains_column(*row_start)) continue; // no upd
+            int offset = std::distance(from.node_.row_begin(), row_start) - from.n_;
+            maps_.push_back(
+                  NodeToNodeMap(*anode, row_start, from.node_.row_end(), offset)
+                  );
+         }
+      }
+
+      int apply(T *lval, T const* contrib, int ldcontrib, int* map) const {
+         for(auto n2nmap : maps_) {
+            n2nmap.apply(lval, contrib, ldcontrib, map);
+         }
+      }
+   private:
+      std::vector<NodeToNodeMap> maps_;
+   };
 
 public:
    explicit SingleNode(AssemblyTree::Node const& node)
@@ -71,7 +96,7 @@ public:
       ldl_ = ldl;
    }
 
-   /** Builds a contribution map. Perform no-op if not an actual ancestor. */
+   /** Builds a contribution map for a single node. Perform no-op if not an actual ancestor. */
    void build_contribution_map(SingleNode<T> const& ancestor) {
       if(ancestor.is_ancestor_of(*this)) {
          int afirst = *(ancestor.node_.row_begin());
@@ -83,6 +108,14 @@ public:
                new NodeToNodeMap(ancestor, row_start, node_.row_end(), offset)
                );
       }
+   }
+
+   /** Builds a contribution map for a chunk. */
+   template <typename U>
+   void build_contribution_map(U const& ancestor_nodes) {
+      contribution_map_.push_back(
+            new NodeToMultiMap<U>(ancestor_nodes, *this)
+            );
    }
 
    bool has_parent() const {
