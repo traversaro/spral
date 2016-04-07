@@ -14,7 +14,7 @@ private:
    static int const ROW_CHUNK_SIZE = 4; //< waste up to ROW_CHUNK_SIZE-1 rows
    static int const COL_CHUNK_SIZE = 1; //< waste up to COL_CHUNK_SIZE-1 cols
    static int const MAX_NROW = 20*ROW_CHUNK_SIZE; //< maximum number of rows
-   static int const MAX_NCOL = 8*COL_CHUNK_SIZE; //< maximum number of cols
+   static int const MAX_NCOL = 16*COL_CHUNK_SIZE; //< maximum number of cols
    static int const NUM_PER_CHUNK = 4; //< Number of nodes to group per chunk
    typedef std::pair<int,int> Coord;
 public:
@@ -39,10 +39,11 @@ public:
          /* Whilst we have ready nodes, keep assigning them */
          while(ready.size()) {
             auto node = ready.front(); ready.pop();
-            auto& chunk = buckets[get_coord(node)];
+            Coord coord = get_coord(node);
+            auto& chunk = buckets[coord];
             chunk.push_back(node);
-            if(chunk.size() >= NUM_PER_CHUNK) {
-               // Chunk is ready
+            if(chunk.size() >= NUM_PER_CHUNK || coord.first >= MAX_NROW || coord.second >= MAX_NCOL) {
+               // Chunk is ready, or big enough to be a single node
                for(auto i=chunk.begin(); i!=chunk.end(); ++i) {
                   node_to_chunk_[i->idx] = next_chunk;
                   if(i->has_parent()) {
@@ -59,10 +60,10 @@ public:
          }
          // FIXME: Try merging smaller nodes into bigger ones with large cols
          //        before we start closing off tiny ones
-         /* If we run out, chase up from bottom of tree finding unassinged
+         /* If we run out, chase up from bottom of tree finding unassigned
           * nodes and closing them */
          // Find unallocated node
-         for(; node_to_chunk_[check_itr->idx]!=-1; ++check_itr);
+         for(; node_to_chunk_[check_itr->idx]!=-1 && check_itr!=tree.leaf_first_end(); ++check_itr);
          if(check_itr==tree.leaf_first_end()) break;
          // Close it out
          auto& chunk = buckets[get_coord(*check_itr)];
