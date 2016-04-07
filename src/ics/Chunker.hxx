@@ -70,7 +70,7 @@ public:
          /* If we run out, chase up from bottom of tree finding unassigned
           * nodes and closing them */
          // Find unallocated node
-         for(; node_to_chunk_[check_itr->idx]!=-1 && check_itr!=tree.leaf_first_end(); ++check_itr);
+         for(; check_itr!=tree.leaf_first_end() && node_to_chunk_[check_itr->idx]!=-1 ; ++check_itr);
          if(check_itr==tree.leaf_first_end()) break;
          // Close it out
          auto& chunk = buckets[get_coord(*check_itr)];
