@@ -123,7 +123,7 @@ public:
                   sn_->build_contribution_map(*(chunk->sn_));
                } else {
                   // This chunk is a single node, ancestor is multi
-                  sn_->build_contribution_map(chunk->mn_->nodes_);
+                  sn_->build_contribution_map(*(chunk->mn_));
                }
             } else {
                if(chunk->sn_) {

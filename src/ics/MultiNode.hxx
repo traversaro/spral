@@ -86,15 +86,15 @@ public:
       maps_.push_back( new MultiMap<T>(ancestor, *this) );
    }
 
-//private:
-   std::vector<SingleNode<T>*> nodes_;
 private:
    /* Friends */
+   friend class NodeToMultiMap<T>;
    friend class MultiMap<T>;
 
    /* Members */
    int matrix_n_;
    long contrib_size_;
+   std::vector<SingleNode<T>*> nodes_;
    std::vector<long> coffset_; //< Offset into contrib for each node
    std::vector<int> ldcontrib_; //< Leading dimensions of contrib blocks
    std::vector<MultiMap<T>*> maps_;

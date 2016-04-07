@@ -35,10 +35,9 @@ public:
    }
 
    /** Builds a contribution map for a chunk. */
-   template <typename U>
-   void build_contribution_map(U const& ancestor_nodes) {
+   void build_contribution_map(MultiNode<T> const& ancestor) {
       contribution_map_.push_back(
-            new NodeToMultiMap<T>(ancestor_nodes, *this)
+            new NodeToMultiMap<T>(ancestor, *this)
             );
    }
 

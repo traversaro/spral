@@ -56,9 +56,8 @@ private:
 template <typename T>
 class NodeToMultiMap: public MapBase<T> {
 public:
-   template <typename U>
-   NodeToMultiMap(U const& ancestor_nodes, SingleNode<T> const &from) {
-      for(auto anode : ancestor_nodes) {
+   NodeToMultiMap(MultiNode<T> const& ancestor, SingleNode<T> const &from) {
+      for(auto anode : ancestor.nodes_) {
          NodeToNodeMap<T> *map = n2n_factory(from, *anode);
          if(map) maps_.push_back(map);
       }
