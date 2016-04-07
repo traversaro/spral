@@ -30,14 +30,11 @@ SymbolicFactor::SymbolicFactor (int n, int ptr[], int row[], int nemin)
    Chunker chunker(tree_);
 
    /* Construct chunks */
-   chunks_.reserve(chunker.get_nchunks());
-   for(auto ci=chunker.begin(); ci!=chunker.end(); ++ci) {
-      chunks_.emplace_back(*this);
-   }
+   chunks_.resize(chunker.get_nchunks());
    int idx=0;
    for(auto ci=chunker.begin(); ci!=chunker.end(); ++ci, ++idx) {
       long sz;
-      chunks_[idx].setup(ci->begin(), ci->end(), factor_mem_size_, sz);
+      chunks_[idx].setup(n_, ci->begin(), ci->end(), factor_mem_size_, sz);
       max_workspace_size_ = std::max(max_workspace_size_, sz);
    }
    max_workspace_size_ = max_workspace_size_*sizeof(double) +
