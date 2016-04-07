@@ -34,8 +34,7 @@ public:
          auto& node = *nbegin;
          int m = node.get_nrow();
          long n = node.get_ncol();
-         sn_ = new SingleNode<T>(node);
-         sn_->set_memloc(loffset, m);
+         sn_ = new SingleNode<T>(node, loffset, m);
          loffset += m*n;
          max_work_size = (m-n)*(m-n);
       } else {

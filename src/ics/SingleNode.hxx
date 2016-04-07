@@ -14,18 +14,13 @@ namespace ics {
 template <typename T>
 class SingleNode {
 public:
-   explicit SingleNode(AssemblyTree::Node const& node)
-   : node_(node), m_(node.get_nrow()), n_(node.get_ncol()), loffset_(0),
-     ldl_(0)
+   explicit SingleNode(AssemblyTree::Node const& node, long loffset, int ldl)
+   : node_(node), m_(node.get_nrow()), n_(node.get_ncol()), loffset_(loffset),
+         ldl_(ldl)
    {}
    ~SingleNode() {
       for(auto cmap : contribution_map_)
          delete cmap;
-   }
-
-   void set_memloc(long loffset, int ldl) {
-      loffset_ = loffset;
-      ldl_ = ldl;
    }
 
    /** Builds a contribution map for a single node. Perform no-op if not an actual ancestor. */
