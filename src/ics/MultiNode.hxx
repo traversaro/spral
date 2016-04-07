@@ -56,6 +56,44 @@ public:
       memhandler.release<T>(contrib, contrib_size_);
    }
 
+#if 0
+   void factor_local(
+         T const aval[],   //< Entries of A
+         T lval[]          //< Entries of L
+         ) {
+
+      for(int col=0; col<n_; col++) {
+         /* Each iteration of this loop handles ONE column PER NODE */
+         T *lptr = &lval[loffset_ + col*NVEC*MVEC*vector_length];
+         int const* aidxptr = &aidx_[col*NVEC*MVEC*vector_length];
+
+         /* Load diagonal entries, add A, sqrt, store. */
+         SimdVec<T> diag[NVEC]; // Each entry from a different node
+         for(int j=0; j<NVEC; ++j) {
+            diag[j] = SimdVec<T>::load_aligned( lptr[j*vector_length] );
+            diag[j] += SimdVec<T>::gather(aval, aidxptr[j*vector_length], 1);
+            diag[j] = sqrt(diag[j]);
+            diag[j].store_aligned( lptr[j*vector_length] );
+         }
+
+         /* Load off diagonal entries, add A, divide by diag, store. */
+         lptr += NVEC*vector_length;
+         SimdVec<T> work[NVEC*MVEC]; // Each entry from a different node
+         for(int i=0; i<MVEC; ++i) {
+            for(int j=0; j<NVEC; ++j) {
+               work[j*MVEC+i] =
+                  SimdVec<T>::load_aligned( lptr[j*vector_length] );
+               work[j*MVEC+i] += SimdVec<T>::gather(aval, aidxptr, 1);
+               work[j*MVEC+i] /= diag[j];
+               work[j*MVEC+i].store_aligned( lptr[j*vector_length] );
+            }
+         }
+
+         /* Update rest of node */
+      }
+   }
+#endif
+
    void forward_solve(int nrhs, T* x, int ldx, T const* lval,
          WorkspaceManager &memhandler) const {
       for(auto node : nodes_)
