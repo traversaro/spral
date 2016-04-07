@@ -9,54 +9,6 @@ namespace ics {
 
 template<typename T>
 class MultiNode {
-   class MultiMap {
-   public:
-      MultiMap(SingleNode<T> const &ancestor, MultiNode const& from)
-      {
-         int idx=0;
-         for(auto node : from.nodes_) {
-            typename SingleNode<T>::NodeToNodeMap *map =
-               SingleNode<T>::n2n_factory(*node, ancestor);
-            long coffset = from.coffset_[idx];
-            int ldcontrib = from.ldcontrib_[idx];
-            if(map) maps_.emplace_back(coffset, ldcontrib, map);
-            idx++;
-         }
-      }
-      MultiMap(MultiNode const &ancestor, MultiNode const& from)
-      {
-         int idx=0;
-         for(auto fnode : from.nodes_) {
-            for(auto anode: ancestor.nodes_) {
-               typename SingleNode<T>::NodeToNodeMap *map =
-                  SingleNode<T>::n2n_factory(*fnode, *anode);
-               long coffset = from.coffset_[idx];
-               int ldcontrib = from.ldcontrib_[idx];
-               if(map) maps_.emplace_back(coffset, ldcontrib, map);
-            }
-            idx++;
-         }
-      }
-      ~MultiMap() {
-         for(auto map : maps_)
-            delete map.map;
-      }
-      void apply(T *lval, T const* contrib, int* work) {
-         for(auto map : maps_)
-            map.apply(lval, contrib, work);
-      }
-   private:
-      struct map_tripple {
-         map_tripple(long coffset, int ldcontrib, typename SingleNode<T>::NodeToNodeMap *map) : coffset(coffset), ldcontrib(ldcontrib), map(map) {}
-         void apply(T *lval, T const* contrib, int* work) {
-            map->apply(lval, &contrib[coffset], ldcontrib, work);
-         }
-         long coffset;
-         int ldcontrib;
-         typename SingleNode<T>::NodeToNodeMap *map;
-      };
-      std::vector<map_tripple> maps_;
-   };
 public:
    MultiNode() {} // FIXME: remove
 
@@ -127,21 +79,25 @@ public:
    }
 
    void build_contribution_map(SingleNode<T> const& ancestor) {
-      maps_.push_back( new MultiMap(ancestor, *this) );
+      maps_.push_back( new MultiMap<T>(ancestor, *this) );
    }
 
    void build_contribution_map(MultiNode<T> const& ancestor) {
-      maps_.push_back( new MultiMap(ancestor, *this) );
+      maps_.push_back( new MultiMap<T>(ancestor, *this) );
    }
 
 //private:
    std::vector<SingleNode<T>*> nodes_;
 private:
+   /* Friends */
+   friend class MultiMap<T>;
+
+   /* Members */
    int matrix_n_;
    long contrib_size_;
    std::vector<long> coffset_; //< Offset into contrib for each node
    std::vector<int> ldcontrib_; //< Leading dimensions of contrib blocks
-   std::vector<MultiMap*> maps_;
+   std::vector<MultiMap<T>*> maps_;
 };
 
 } /* namespace ics */

@@ -4,6 +4,7 @@
 
 #include "AssemblyTree.hxx"
 #include "ICSExceptions.hxx"
+#include "Maps.hxx"
 #include "SimdVec.hxx"
 #include "WorkspaceManager.hxx"
 
@@ -13,81 +14,6 @@ namespace ics {
 template <typename T>
 class SingleNode {
 public:
-   /** Virtual base class for NodeToNodeMap and NodeToChunkMap */
-   class MapBase {
-   public:
-      virtual
-      void apply(T *lval, T const* contrib, int ldcontrib, int* map) const=0;
-   };
-   class NodeToNodeMap: public MapBase {
-   public:
-      NodeToNodeMap(SingleNode<T> const& ancestor, int const* row_start, int const* row_end, int offset)
-      : ancestor_(ancestor), row_start_(row_start), row_end_(row_end), offset_(offset)
-      {}
-
-      /** Adds the contribution in contrib as per list (of rows).
-       *  Uses map as workspace.
-       *  \returns Number of columns found relevant. */
-      void apply(T *lval, T const* contrib, int ldcontrib, int* map) const {
-         contrib += offset_*(ldcontrib+1);
-         T *lptr = &lval[ancestor_.loffset_];
-         ancestor_.node_.construct_row_map(map);
-         for(auto src_col=row_start_; src_col!=row_end_; ++src_col) {
-            int cidx = std::distance(row_start_, src_col);
-            if(! ancestor_.node_.contains_column(*src_col) )
-               return; // done
-            int col = map[ *src_col ]; // NB: Equal to *src_col - sptr[node]
-            T const* src = &contrib[cidx*(ldcontrib+1)]; // Start on diagonal
-            T *dest = &lptr[col * ancestor_.ldl_];
-            for(auto src_row=src_col; src_row!=row_end_; ++src_row) {
-               int row = map[ *src_row ];
-               dest[row] += *(src++);
-            }
-         }
-      }
-
-      /** Return offset into node index list (i.e. how many rows to skip) */
-      int get_offset() const { return offset_; }
-   private:
-      int const* row_start_;
-      int const* row_end_;
-      long offset_;
-      SingleNode<T> const& ancestor_;
-   };
-   template <typename U>
-   class NodeToMultiMap: public MapBase {
-   public:
-      NodeToMultiMap(U const& ancestor_nodes, SingleNode const &from) {
-         for(auto anode : ancestor_nodes) {
-            NodeToNodeMap *map = n2n_factory(from, *anode);
-            if(map) maps_.push_back(map);
-         }
-      }
-      ~NodeToMultiMap() {
-         for(auto map : maps_) delete map;
-      }
-
-      void apply(T *lval, T const* contrib, int ldcontrib, int* work) const {
-         for(auto map : maps_) {
-            map->apply(lval, contrib, ldcontrib, work);
-         }
-      }
-   private:
-      std::vector<NodeToNodeMap*> maps_;
-   };
-
-   /** Returns a map from a descendant from to an ancestor to. */
-   static
-   NodeToNodeMap* n2n_factory(SingleNode<T> const &from, SingleNode const &to) {
-      if(!to.is_ancestor_of(from)) return nullptr; // no upd
-      int afirst = *(to.node_.row_begin());
-      auto row_start = std::next(from.node_.row_begin(), from.n_);
-      for(; *row_start < afirst && row_start!=from.node_.row_end(); ++row_start);
-      if(!to.node_.contains_column(*row_start)) return nullptr; // no upd
-      int offset = std::distance(from.node_.row_begin(), row_start) - from.n_;
-      return new NodeToNodeMap(to, row_start, from.node_.row_end(), offset);
-   }
-
    explicit SingleNode(AssemblyTree::Node const& node)
    : node_(node), m_(node.get_nrow()), n_(node.get_ncol()), loffset_(0),
      ldl_(0)
@@ -104,7 +30,7 @@ public:
 
    /** Builds a contribution map for a single node. Perform no-op if not an actual ancestor. */
    void build_contribution_map(SingleNode<T> const& ancestor) {
-      NodeToNodeMap *map = n2n_factory(*this, ancestor);
+      NodeToNodeMap<T> *map = n2n_factory(*this, ancestor);
       if(map) contribution_map_.push_back(map);
    }
 
@@ -112,7 +38,7 @@ public:
    template <typename U>
    void build_contribution_map(U const& ancestor_nodes) {
       contribution_map_.push_back(
-            new NodeToMultiMap<U>(ancestor_nodes, *this)
+            new NodeToMultiMap<T>(ancestor_nodes, *this)
             );
    }
 
@@ -253,13 +179,17 @@ public:
    }
 
 private:
+   /* Friends */
+   friend class NodeToNodeMap<T>;
+   friend NodeToNodeMap<T>* n2n_factory<T>(SingleNode<T> const&, SingleNode<T> const&);
+
    /* Members */
    AssemblyTree::Node const node_;
    int const m_;
    int const n_;
    long loffset_;
    int ldl_;
-   std::vector< MapBase* > contribution_map_;
+   std::vector< MapBase<T>* > contribution_map_;
 };
 
 } /* namespace ics */
