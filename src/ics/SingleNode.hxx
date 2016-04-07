@@ -12,11 +12,12 @@ namespace ics {
 
 template <typename T>
 class SingleNode {
+public:
    /** Virtual base class for NodeToNodeMap and NodeToChunkMap */
    class MapBase {
    public:
       virtual
-      int apply(T *lval, T const* contrib, int ldcontrib, int* map) const=0;
+      void apply(T *lval, T const* contrib, int ldcontrib, int* map) const=0;
    };
    class NodeToNodeMap: public MapBase {
    public:
@@ -27,14 +28,14 @@ class SingleNode {
       /** Adds the contribution in contrib as per list (of rows).
        *  Uses map as workspace.
        *  \returns Number of columns found relevant. */
-      int apply(T *lval, T const* contrib, int ldcontrib, int* map) const {
+      void apply(T *lval, T const* contrib, int ldcontrib, int* map) const {
          contrib += offset_*(ldcontrib+1);
          T *lptr = &lval[ancestor_.loffset_];
          ancestor_.node_.construct_row_map(map);
          for(auto src_col=row_start_; src_col!=row_end_; ++src_col) {
             int cidx = std::distance(row_start_, src_col);
             if(! ancestor_.node_.contains_column(*src_col) )
-               return cidx; // Done: return #cols used
+               return; // done
             int col = map[ *src_col ]; // NB: Equal to *src_col - sptr[node]
             T const* src = &contrib[cidx*(ldcontrib+1)]; // Start on diagonal
             T *dest = &lptr[col * ancestor_.ldl_];
@@ -43,8 +44,6 @@ class SingleNode {
                dest[row] += *(src++);
             }
          }
-         // If we reach this point, we have used all columns
-         return std::distance(row_start_, row_end_);
       }
 
       /** Return offset into node index list (i.e. how many rows to skip) */
@@ -60,28 +59,35 @@ class SingleNode {
    public:
       NodeToMultiMap(U const& ancestor_nodes, SingleNode const &from) {
          for(auto anode : ancestor_nodes) {
-            if(!anode->is_ancestor_of(from)) continue;
-            int afirst = *(anode->node_.row_begin());
-            auto row_start = std::next(from.node_.row_begin(), from.n_);
-            for(; *row_start < afirst && row_start!=from.node_.row_end(); ++row_start);
-            if(!anode->node_.contains_column(*row_start)) continue; // no upd
-            int offset = std::distance(from.node_.row_begin(), row_start) - from.n_;
-            maps_.push_back(
-                  NodeToNodeMap(*anode, row_start, from.node_.row_end(), offset)
-                  );
+            NodeToNodeMap *map = n2n_factory(from, *anode);
+            if(map) maps_.push_back(map);
          }
       }
+      ~NodeToMultiMap() {
+         for(auto map : maps_) delete map;
+      }
 
-      int apply(T *lval, T const* contrib, int ldcontrib, int* map) const {
-         for(auto n2nmap : maps_) {
-            n2nmap.apply(lval, contrib, ldcontrib, map);
+      void apply(T *lval, T const* contrib, int ldcontrib, int* work) const {
+         for(auto map : maps_) {
+            map->apply(lval, contrib, ldcontrib, work);
          }
       }
    private:
-      std::vector<NodeToNodeMap> maps_;
+      std::vector<NodeToNodeMap*> maps_;
    };
 
-public:
+   /** Returns a map from a descendant from to an ancestor to. */
+   static
+   NodeToNodeMap* n2n_factory(SingleNode<T> const &from, SingleNode const &to) {
+      if(!to.is_ancestor_of(from)) return nullptr; // no upd
+      int afirst = *(to.node_.row_begin());
+      auto row_start = std::next(from.node_.row_begin(), from.n_);
+      for(; *row_start < afirst && row_start!=from.node_.row_end(); ++row_start);
+      if(!to.node_.contains_column(*row_start)) return nullptr; // no upd
+      int offset = std::distance(from.node_.row_begin(), row_start) - from.n_;
+      return new NodeToNodeMap(to, row_start, from.node_.row_end(), offset);
+   }
+
    explicit SingleNode(AssemblyTree::Node const& node)
    : node_(node), m_(node.get_nrow()), n_(node.get_ncol()), loffset_(0),
      ldl_(0)
@@ -98,16 +104,8 @@ public:
 
    /** Builds a contribution map for a single node. Perform no-op if not an actual ancestor. */
    void build_contribution_map(SingleNode<T> const& ancestor) {
-      if(ancestor.is_ancestor_of(*this)) {
-         int afirst = *(ancestor.node_.row_begin());
-         auto row_start = std::next(node_.row_begin(), n_);
-         for(; *row_start < afirst && row_start!=node_.row_end(); ++row_start);
-         if(!ancestor.node_.contains_column(*row_start)) return; // no upd
-         int offset = std::distance(node_.row_begin(), row_start) - n_;
-         contribution_map_.push_back(
-               new NodeToNodeMap(ancestor, row_start, node_.row_end(), offset)
-               );
-      }
+      NodeToNodeMap *map = n2n_factory(*this, ancestor);
+      if(map) contribution_map_.push_back(map);
    }
 
    /** Builds a contribution map for a chunk. */
@@ -148,6 +146,29 @@ public:
 
    void factor(T const* aval, T* lval, WorkspaceManager &memhandler) const {
       //printf("Factor %d: %dx%d\n", node_.idx, m_, n_);
+
+      int ldcontrib = m_ - n_;
+      T *contrib =
+         (ldcontrib > 0) ? memhandler.get<T>((m_-n_)*((long) ldcontrib))
+                         : nullptr;
+      int *map =
+         (ldcontrib > 0) ? memhandler.get<int>(node_.get_max_tree_row_index())
+                         : nullptr;
+
+      factor_local(aval, lval, contrib, ldcontrib);
+
+      /* Distribute elements of generated element to ancestors */
+      for(auto n2n_map = contribution_map_.begin(); n2n_map != contribution_map_.end(); ++n2n_map) {
+         (*n2n_map)->apply(lval, contrib, ldcontrib, map);
+      }
+
+      /* Release workspace */
+      if(map) memhandler.release<int>(map, node_.get_max_tree_row_index());
+      if(contrib) memhandler.release<T>(contrib, (m_-n_)*((long) ldcontrib));
+   }
+
+   /* Perform factor operations local to this node */
+   void factor_local(T const *aval, T *lval, T *contrib, int ldcontrib) const {
       /* Setup working pointers */
       T *ldiag = &lval[loffset_];
       T *lrect = &lval[loffset_ + n_];
@@ -164,26 +185,12 @@ public:
 
       /* Only work with generated element if it exists! */
       if(m_ - n_ > 0) { 
-         /* Get workspace */
-         int ldcontrib = m_ - n_;
-         T *contrib = memhandler.get<T>((m_-n_)*((long) ldcontrib));
-         int *map = memhandler.get<int>(node_.get_max_tree_row_index());
-
          /* Apply to block below diagonal */
          trsm<T>('R', 'L', 'T', 'N', m_-n_, n_, 1.0, ldiag, ldl_, lrect, ldl_);
 
          /* Form generated element into workspace */
          syrk<T>('L', 'N', m_-n_, n_, -1.0, lrect, ldl_, 0.0, contrib,
                ldcontrib);
-
-         /* Distribute elements of generated element to ancestors */
-         for(auto n2n_map = contribution_map_.begin(); n2n_map != contribution_map_.end(); ++n2n_map) {
-            (*n2n_map)->apply(lval, contrib, ldcontrib, map);
-         }
-
-         /* Release workspace */
-         memhandler.release<int>(map, node_.get_max_tree_row_index());
-         memhandler.release<T>(contrib, (m_-n_)*((long) ldcontrib));
       }
    }
 
@@ -246,7 +253,6 @@ public:
    }
 
 private:
-
    /* Members */
    AssemblyTree::Node const node_;
    int const m_;

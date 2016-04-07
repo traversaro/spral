@@ -41,7 +41,7 @@ public:
             max_work_size = (m-n)*(m-n);
          } else {
             // Multiple node
-            mn_ = new MultiNode<T>(nbegin, nend, loffset, max_work_size);
+            mn_ = new MultiNode<T>(sf_.n_, nbegin, nend, loffset, max_work_size);
          }
       }
 
