@@ -24,8 +24,7 @@ public:
    {}
 
    /** Adds the contribution in contrib as per list (of rows).
-    *  Uses map as workspace.
-    *  \returns Number of columns found relevant. */
+    *  Uses map as workspace. */
    void apply(T *lval, T const* contrib, int ldcontrib, int* map) const {
       contrib += offset_*(ldcontrib+1);
       T *lptr = &lval[ancestor_.loffset_];
