@@ -799,7 +799,7 @@ logical function do_merge(node, par, nelim, cc, ezero, nemin)
       return
    endif
 
-   do_merge = (cc(par).eq.cc(node)-nelim(node) .and. nelim(par).eq.1) .or. &
+   do_merge = (cc(par).eq.cc(node)-1 .and. nelim(par).eq.1) .or. &
       (nelim(par).lt.nemin .and. nelim(node).lt.nemin)
 end function do_merge
 
