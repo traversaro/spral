@@ -28,6 +28,9 @@ SymbolicFactor::SymbolicFactor (int n, int ptr[], int row[], int nemin)
 
    /* Find assignment of nodes to chunks */
    Chunker chunker(tree_);
+   printf("Nodes in chunks full, partial, single = %d %d %d\n",
+         chunker.get_stats().nfull, chunker.get_stats().npartial,
+         chunker.get_stats().nsingle);
 
    /* Construct chunks */
    chunks_.resize(chunker.get_nchunks());

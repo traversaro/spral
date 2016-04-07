@@ -18,6 +18,12 @@ private:
    static int const NUM_PER_CHUNK = 4; //< Number of nodes to group per chunk
    typedef std::pair<int,int> Coord;
 public:
+   struct stats {
+      int nfull=0; // #nodes in candidate size range in full chunks
+      int npartial=0; // #nodes in candidate size range in partial chunks
+      int nsingle=0; // #nodes in candidate size range in single node chunks
+   };
+
    Chunker(AssemblyTree const& tree)
    : node_to_chunk_(tree.get_nnodes(), -1)
    {
@@ -43,6 +49,7 @@ public:
             auto& chunk = buckets[coord];
             chunk.push_back(node);
             if(chunk.size() >= NUM_PER_CHUNK || coord.first >= MAX_NROW || coord.second >= MAX_NCOL) {
+               if(chunk.size() >= NUM_PER_CHUNK) stats_.nfull+=NUM_PER_CHUNK;
                // Chunk is ready, or big enough to be a single node
                for(auto i=chunk.begin(); i!=chunk.end(); ++i) {
                   node_to_chunk_[i->idx] = next_chunk;
@@ -67,6 +74,8 @@ public:
          if(check_itr==tree.leaf_first_end()) break;
          // Close it out
          auto& chunk = buckets[get_coord(*check_itr)];
+         if(chunk.size() == 1) stats_.nsingle++;
+         else stats_.npartial+=chunk.size();
          for(auto i=chunk.begin(); i!=chunk.end(); ++i) {
             node_to_chunk_[i->idx] = next_chunk;
             if(i->has_parent()) {
@@ -103,6 +112,8 @@ public:
 
    int get_nchunks() const { return chunks_.size(); }
 
+   stats get_stats() const { return stats_; }
+
 private:
    Coord get_coord(AssemblyTree::Node const& node) {
       return Coord(
@@ -120,6 +131,9 @@ private:
 
    std::vector<int> node_to_chunk_;
    std::vector< std::vector<AssemblyTree::Node> > chunks_;
+
+   /* Stats */
+   struct stats stats_;
 };
 
 } /* namespace ics */
