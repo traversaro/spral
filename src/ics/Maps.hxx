@@ -57,8 +57,8 @@ template <typename T>
 class NodeToMultiMap: public MapBase<T> {
 public:
    NodeToMultiMap(MultiNode<T> const& ancestor, SingleNode<T> const &from) {
-      for(auto anode : ancestor.nodes_) {
-         NodeToNodeMap<T> *map = n2n_factory(from, *anode);
+      for(auto anodeinfo : ancestor.nodes_) {
+         NodeToNodeMap<T> *map = n2n_factory(from, *anodeinfo.node);
          if(map) maps_.push_back(map);
       }
    }
@@ -80,26 +80,20 @@ class MultiMap {
 public:
    MultiMap(SingleNode<T> const &ancestor, MultiNode<T> const& from)
    {
-      int idx=0;
-      for(auto node : from.nodes_) {
-         NodeToNodeMap<T> *map = n2n_factory(*node, ancestor);
-         long coffset = from.coffset_[idx];
-         int ldcontrib = from.ldcontrib_[idx];
-         if(map) maps_.emplace_back(coffset, ldcontrib, map);
-         idx++;
+      for(auto nodeinfo : from.nodes_) {
+         NodeToNodeMap<T> *map = n2n_factory(*nodeinfo.node, ancestor);
+         if(map) maps_.emplace_back(nodeinfo.coffset, nodeinfo.ldcontrib, map);
       }
    }
    MultiMap(MultiNode<T> const &ancestor, MultiNode<T> const& from)
    {
-      int idx=0;
-      for(auto fnode : from.nodes_) {
-         for(auto anode: ancestor.nodes_) {
-            NodeToNodeMap<T> *map = n2n_factory(*fnode, *anode);
-            long coffset = from.coffset_[idx];
-            int ldcontrib = from.ldcontrib_[idx];
-            if(map) maps_.emplace_back(coffset, ldcontrib, map);
+      for(auto fnodeinfo : from.nodes_) {
+         for(auto anodeinfo: ancestor.nodes_) {
+            NodeToNodeMap<T> *map =
+               n2n_factory(*fnodeinfo.node, *anodeinfo.node);
+            if(map)
+               maps_.emplace_back(fnodeinfo.coffset, fnodeinfo.ldcontrib, map);
          }
-         idx++;
       }
    }
    ~MultiMap() {
