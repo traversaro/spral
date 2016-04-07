@@ -11,6 +11,7 @@ float tdiff(const struct timespec &t1, const struct timespec &t2) {
 }
 
 struct DriverOptions {
+   bool anal_only;
    bool print_matrix;
    bool print_factors;
    bool force_posdef;
@@ -20,6 +21,7 @@ struct DriverOptions {
       boost::program_options::options_description desc("Allowed options");
       desc.add_options()
          ("help", "produce help message")
+         ("anal-only", "only run analysis phase")
          ("print-matrix", "print input matrix")
          ("print-factors", "print numeric factors")
          ("force-posdef", "randomly generate values for posdef matrix")
@@ -37,6 +39,7 @@ struct DriverOptions {
       }
 
       /* Set values that require present/not-present */
+      anal_only = ( vm.count("anal-only") );
       print_matrix = ( vm.count("print-matrix") );
       print_factors = ( vm.count("print-factors") );
       force_posdef = ( vm.count("force-posdef") );
@@ -145,6 +148,7 @@ int main(int argc, char *const * argv) {
    printf("Analyse took %e\n", tdiff(t1, t2));
    printf("Predicted nfact = %.2le\n", (double) sfact.get_nfact());
    printf("Predicted nflop = %.2le\n", (double) sfact.get_nflop());
+   if(options.anal_only) exit(0);
 
    if(options.print_matrix) {
       printf("perm = ");
