@@ -14,7 +14,7 @@ AC_PROG_F77
 AC_PROG_FC
 AC_PROG_RANLIB
 AS_IF([test "x$enable_gpu" != "xno"], [
-   ACX_PROG_NVCC
+   SPRAL_PROG_NVCC
    ])
 AM_CONDITIONAL([HAVE_NVCC], [test -n "$NVCC"])
 
@@ -22,8 +22,8 @@ AM_CONDITIONAL([HAVE_NVCC], [test -n "$NVCC"])
 AC_FC_LIBRARY_LDFLAGS
 
 # Check for required libraries
-ACX_BLAS(,[AC_MSG_ERROR([No BLAS library found.])])
-ACX_LAPACK(,[AC_MSG_ERROR([No LAPACK library found.])])
+AX_BLAS(,[AC_MSG_ERROR([No BLAS library found.])])
+AX_LAPACK(,[AC_MSG_ERROR([No LAPACK library found.])])
 SPRAL_METIS(,
    [AC_MSG_ERROR([No MeTiS library found.])]
    )
